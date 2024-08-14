@@ -1,0 +1,51 @@
+&edata
+! ODE solver params: ---------------------------------------------------
+ xrtol = 3e-07,	     ! required rel. error
+ xatol = 3e-07,	     ! required abs. error
+ xstep = 0.1,	     ! integration step
+ npow = 1,	     ! power absorption on(1)/off(0)
+ ncd = 0,	     ! current drive calc. on(1)/off(0)
+ ianexp = 2,	     ! analytic (1) or experimental (2) equilibrium
+ ndns = 2,	     ! analytic (1) or interpolated (2) density profiles
+ nte = 2,	     ! analyt. (1) or interp. (2) electron temp. prof.
+ ncdroutine = 0,     ! 0->Curba, 1->Lin-Liu, 2->Lin-Liu+momentum conservation
+ nshot = 25485,	     ! shot number
+ xtbeg = 4.500000,	     ! tbegin
+ xtend = 4.500000,	     ! tende
+ nmaxh = 5,
+ nrela = 0,
+ nabsroutine = 1,
+! nastra=0,
+! Beam params: ---------------------------------------------------------
+ nmod = -1,          ! mode selection: O-mode (1), X-mode (-1)
+ xf = 1.4e+11,	     ! wave frequency om=2*pi*xf
+ xtordeg = 0.00000,	     ! geom. optics injection angle
+ xpoldeg = 5.000000,	     ! geom. optics injection angle
+ xxb= 236.000000,	     ! beam launching parameter for tracing calc.
+ xyb = 0.000000,	     ! beam launching parameter for tracing calc.
+ xzb = 32.000000,	     ! beam launching parameter for tracing calc.
+ xryyb = 100.0000,	     ! initial principal curvature
+ xrzzb = 100.0000,	     ! initial principal curvature
+ xwyyb = 3.500,	     ! initial principal width
+ xwzzb = 3.500,	     ! initial principal width
+ xpw0 = 1.000000,	     ! initial beam power [MW]
+! nrel = 1,
+! Plasma params: -------------------------------------------------------
+ xrmaj = 165.000000,       ! major radius
+ xrmin = 60.000000,	     ! minor radius
+ xb0 = 2.500000,	     ! central toroidal magnetic field [T]
+ xdns = 6.e+13,	     ! electron density [cm**(-3)]
+ edgdns = 1.e+12,     ! electron density [cm**(-3)]
+ xe1 = 2.000000,	     ! exponent in the density profile
+ xe2 = 0.500000,	     ! exponent in the density profile
+ xte0 = 25.000000,	     ! electron temperature [keV]
+ xteedg = 1.000000,    ! electron temperature [keV]
+ xe1t = 2.000000,	     ! exponent in the temperature profile
+ xe2t = 2.000000,	     ! exponent in the temperature profile
+ xdel0 = 0.000000,	     ! Shafranov shift on the axis
+ xdeled = 0.000000,	     ! Shafranov shift on the edge
+ xelo0 = 1.000000,	     ! elongation on the axis
+ xeloed = 1.500000,	     ! elongation on the edge
+ xq0 = 1.000000,	     ! safety factor on the axis
+ xqedg = 4.000000	     ! safety factor on the edge
+/

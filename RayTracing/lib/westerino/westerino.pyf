@@ -1,0 +1,212 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module westerinoECabsorption ! in 
+    interface  ! in :westerinoECabsorption
+        subroutine dampbq(ptheta,pnr,pni,palfa,pbeta,pvte,pmode,icalled) ! in :ECabsorption:westerino.f90
+            real*8, intent(in)  :: ptheta
+            real*8, intent(in)  :: pnr
+            real*8, intent(out) :: pni
+            real*8, intent(in)  :: palfa
+            real*8, intent(in)  :: pbeta
+            real*8, intent(in)  :: pvte
+            real*8, intent(in)  :: pmode
+            integer, intent(in) :: icalled
+            complex*8 :: ci1
+            integer :: nquad
+            integer :: nbegin
+            integer :: nsign
+            real*8 :: pi
+            real*8 :: rootpi
+            real*8 :: twopi
+            common /ii/ ci1
+            common /commbq/ nquad,nbegin,nsign
+            common /pp/ pi,rootpi,twopi
+        end subroutine dampbq
+        subroutine dielte(plasm1,plasm2,ce) ! in :ECabsorption:westerino.f90
+            real dimension(51) :: plasm1
+            real dimension(10) :: plasm2
+            complex dimension(3,3) :: ce
+            real :: zmu
+            real :: zc
+            integer :: jloss
+            integer :: janex
+            logical :: ilrela
+            integer :: imax
+            common /commu/ zmu,zc,jloss
+            common /comexp/ janex
+            common /fwrel/ ilrela,imax
+        end subroutine dielte
+        subroutine epsilon(plasma,jnpar,jnper,ce) ! in :ECabsorption:westerino.f90
+            real dimension(51) :: plasma
+            integer :: jnpar
+            integer :: jnper
+            complex dimension(3,3) :: ce
+            complex :: ci1
+            real :: pi
+            real :: rootpi
+            real :: twopi
+            real :: realh
+            integer :: nsum
+            common /ii/ ci1
+            common /pp/ pi,rootpi,twopi
+            common /hh/ realh
+            common /nn/ nsum
+        end subroutine epsilon
+        function zeta(z) ! in :ECabsorption:westerino.f90
+            complex :: z
+            real*8 :: h
+            complex :: zeta
+            common /hh/ h
+        end function zeta
+        function zeta1(z) ! in :ECabsorption:westerino.f90
+            complex :: z
+            complex :: i
+            real*8 :: h
+            real*8 :: pi
+            real*8 :: rootpi
+            real*8 :: twopi
+            integer :: nsum
+            complex :: zeta1
+            common /ii/ i
+            common /hh/ h
+            common /pp/ pi,rootpi,twopi
+            common /nn/ nsum
+        end function zeta1
+        function zeta2(z) ! in :ECabsorption:westerino.f90
+            complex :: z
+            complex :: i
+            real*8 :: h
+            real*8 :: pi
+            real*8 :: rootpi
+            real*8 :: twopi
+            integer :: nsum
+            complex :: zeta2
+            common /ii/ i
+            common /hh/ h
+            common /pp/ pi,rootpi,twopi
+            common /nn/ nsum
+        end function zeta2
+        function zeta3(z) ! in :ECabsorption:westerino.f90
+            complex :: z
+            complex :: i
+            real*8 :: h
+            real*8 :: pi
+            real*8 :: rootpi
+            real*8 :: twopi
+            integer :: nsum
+            complex :: zeta3
+            common /ii/ i
+            common /hh/ h
+            common /pp/ pi,rootpi,twopi
+            common /nn/ nsum
+        end function zeta3
+        function zeta4(z) ! in :ECabsorption:westerino.f90
+            complex :: z
+            complex :: i
+            real*8 :: h
+            real*8 :: pi
+            real*8 :: rootpi
+            real*8 :: twopi
+            integer :: nsum
+            complex :: zeta4
+            common /ii/ i
+            common /hh/ h
+            common /pp/ pi,rootpi,twopi
+            common /nn/ nsum
+        end function zeta4
+        function sexp(arg) ! in :ECabsorption:westerino.f90
+            complex :: arg
+            complex :: sexp
+        end function sexp
+        function zgamma(kn) ! in :ECabsorption:westerino.f90
+            logical :: kn
+            real*8 :: zgamma
+        end function zgamma
+        function gammah(kq) ! in :ECabsorption:westerino.f90
+            logical :: kq
+            logical :: pi
+            logical :: rootpi
+            logical :: twopi
+            real*8 :: gammah
+            common /pp/ pi,rootpi,twopi
+        end function gammah
+        subroutine distr(pgamma,pppar,pnpar,pny,pf,pu,pw) ! in :ECabsorption:westerino.f90
+            logical :: pgamma
+            logical :: pppar
+            logical :: pnpar
+            logical :: pny
+            logical :: pf
+            logical :: pu
+            logical :: pw
+            logical :: zmu
+            logical :: zc
+            logical :: jloss
+            common /commu/ zmu,zc,jloss
+        end subroutine distr
+        function fk(z,j,naccur) ! in :ECabsorption:westerino.f90
+            logical :: z
+            logical :: j
+            logical :: naccur
+            logical :: fk
+        end function fk
+        function fgamma(pq) ! in :ECabsorption:westerino.f90
+            logical :: pq
+            logical :: fgamma
+        end function fgamma
+        function fac(n) ! in :ECabsorption:westerino.f90
+            logical :: n
+            logical :: fac
+        end function fac
+        subroutine frepsln(px,py,pnpar,pnper,pmu,nmin,nmax,nterm,npm,ngm,nam,ce) ! in :ECabsorption:westerino.f90
+            logical :: px
+            logical :: py
+            logical :: pnpar
+            logical :: pnper
+            logical :: pmu
+            logical :: nmin
+            logical :: nmax
+            logical :: nterm
+            logical :: npm
+            logical :: ngm
+            logical :: nam
+            complex dimension(3,3) :: ce
+        end subroutine frepsln
+        function bessel(n,px,kterm) ! in :ECabsorption:westerino.f90
+            logical :: n
+            logical :: px
+            logical :: kterm
+            logical :: bessel
+        end function bessel
+        function besslp(n,px,kterm) ! in :ECabsorption:westerino.f90
+            logical :: n
+            logical :: px
+            logical :: kterm
+            logical :: besslp
+        end function besslp
+        subroutine calcei(arg,result,int_bn) ! in :ECabsorption:westerino.f90
+            real*8 :: arg
+            real*8 :: result
+            integer :: int_bn
+        end subroutine calcei
+        function ei(x) ! in :ECabsorption:westerino.f90
+            real*8 :: x
+            real*8 :: ei
+        end function ei
+        function expei(x) ! in :ECabsorption:westerino.f90
+            real*8 :: x
+            real*8 :: expei
+        end function expei
+        function eone(x) ! in :ECabsorption:westerino.f90
+            real*8 :: x
+            real*8 :: eone
+        end function eone
+        function rexp(x) ! in :ECabsorption:westerino.f90
+            logical :: x
+            logical :: rexp
+        end function rexp
+    end interface 
+end python module westerinoECabsorption
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

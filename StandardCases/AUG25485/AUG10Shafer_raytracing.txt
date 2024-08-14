@@ -1,0 +1,210 @@
+# Example for ASDEX Upgrade shot number 25485
+# Case with the turbulence model of Shafer et al 
+# [Phys. Plasmas 19, 032504 (2012)]: 10% maximum fluctuation level.
+#
+# Control parameters of the MC ray-tracing code
+# ---
+
+#############################################################################
+# TOKAMAK PARAMETERS AND EQUILIBRIUM
+#############################################################################
+
+equilibrium = 'Tokamak'  # equilibrium model: 
+	                 # 'Model', 'Tomakak', and 'Axisymmetric'
+
+rmaj = 165.                       # major and minor radius of the tokamak
+rmin = 60.
+
+# directory, where the elec.dens. profile can be found and so on
+# (do not forget a trailing slash on the directory!)
+equilibriumdirectory = 'StandardCases/AUG25485/input/'
+
+
+#############################################################################
+# OUTPUT PARAMETERS
+#############################################################################
+# directory, where the result file is written
+output_dir = 'StandardCases/AUG25485/output/'
+# output filename
+output_filename = 'AUG10Shafer'        
+
+# if true, the first ray to be traced is the central, most probable one.
+takecentralrayfirst = True                     
+# specify which information is stored in the output file
+storeNxNyNz = False
+storeNparallelphiN = True			 
+storeGroupVelocity = True
+storeCorrectionFactor = True
+storePsi = True		 
+# print progress
+ControlOutput = True
+# print every ...-th ray traced, if not defined set to 100
+PrintNmbrRays = 50
+
+#############################################################################
+# BEAM PARAMETERS
+#############################################################################
+freq = 140. # beam freq. in GHz
+sigma = -1.  # wave mode (+1 corresponds to O-mode, -1 corresponds to X-mode)
+
+beamwidth1 = 3.5   # beamwidth 
+beamwidth2 = 3.5
+
+curvatureradius1 = 100.      # curvature radius 
+curvatureradius2 = 100.
+
+rayStartX = 236.0           # central antenna starting point coordinates
+rayStartY = 0.
+rayStartZ = 32.
+
+antennatordeg = 0.        # antenna oriantation angles in degree
+antennapoldeg = 5.
+anglespecification = 'ASDEX'
+
+centraleta1 = 0.            # usually should be set to zero. Used to launch rays with some angle to the antenna plane.
+centraleta2 = 0.
+
+
+#############################################################################
+# SOLVER AND RAY TRACING PARAMETERS
+#############################################################################
+# number of integration steps. The integration can be aborded before due to 
+# absorption or leaving the plasma. See the corresponding parameters below
+npt = 800                                        				 
+timestep = 0.3	        # timestep for the integration 		 
+epsilonRegS = 1e-8	# regularisation parameter for Hamiltonian 
+                        # in case of UH-resonance		  
+integratormaxnmbrsteps = 1500   # max. number of integration steps 
+                                # for Runge-Kutta solver
+integratorreltol = 1e-7         # max. rel. tolerance for solver
+integratorabstol = 1e-7         # max. abs. tolerance for solver
+
+nmbrRays = 100                  # number of rays to trace
+
+
+nmbrMetrHastBoundaryInit = 10000   # number of random numbers generated
+		    	           # in order to initialise the Metropolis-
+			           # Hastings alogrithm for the ray launching
+
+#############################################################################
+# SPECIAL CONDITIONS 
+#############################################################################
+# Absorption
+absorption = True             # put true if you wish to juse the absorption
+                               # coefficient as it is in a physical model
+                               # (for plasma case only)
+
+# in case, plasma is considered
+absorptionModule = 1	       # 0 --> Westerhof absorption routine used
+		               # 1 --> Farina absorption routine used
+
+			       # specify, how long before the last absorption started
+			       # it is started to compute the absorption coefficient.
+			       # Before it is set to 0.
+
+# for generic Hamiltonians
+absorptionLayerX = 120.        # absorption layer at this specified X
+
+absorptionStartEarlierThenCentralRay = 2.    # put 0 if you wish to compute absorption from 0 on          
+absorptionConsiderAsNonZeroTreshhold = 1.e-1  # treshhold when absorption is considered to
+				              # be non-necligible.
+absorptionSmallerTimestepsFactor = 10.  # when it is assumed that there is absorption,
+				        # smaller timesteps are chosen.
+
+absorptionWfctTreshhold = 0.001 # determines when the ray tracing is stopped 
+                                # because the Wfct is too small and does not 
+                                #contribute any more.
+
+
+
+
+			       # relative to the Wfct of the central ray.
+# Reflektometrie
+reflektometrie = False         # if turned on, detects when the rays 
+	       	 	       # are leaving the plasma and stopps ray tracing
+			       # using the treshhold below
+reflektometrierhoTreshhold = 1.1 # rho when tracing is stopped.
+
+
+
+
+
+#############################################################################
+# SCATTERING
+#############################################################################
+# set True in the following line if you wish to turn on the scattering.
+scattering = True
+
+# set True in the following line if you wish to take into account
+# cross-polarization scattering
+CrossPolarizationScatt = True
+
+# set True in the following line if Gaussian scattering model is wished
+# (compare master thesis), 
+# in case False is set, the model from M. W. Shafer is implemented
+scatteringGaussian = False
+
+# Controlling the model of Shafer et al.
+scatteringLambda = -1. # interpolate between different models
+scatteringDelta = 0.1  # width in rho poloidal of the scattering layer
+scatteringrhocentral = 1. # position of the layer in rho poloidal
+
+# set the parameters used for the model for plasma
+#######################################################################
+# the following parameters are used for the Gaussian-shaped model
+# and also to determine the guess for the Poisson intensity
+# (so please check if this guess is large enough)
+scatteringLengthPerp = 0.4            # correlation length
+scatteringLengthParallel = 100.
+
+# in the next line, a python lambda-function is defined, which serves as a model
+# defining the square root of the relative electron density fluctuation variance
+#scatteringDeltaneOverne = lambda ne,rho,theta: 0.1*math.exp(-(rho-1)**2 / 0.02**2)  
+
+# For the model of Shafer et al. this should be replaced by a flot
+scatteringDeltaneOverne = 0.1 # 10% fluctuation level
+
+
+scatteringMaxProbGuessFactor = 5.    # factor the max. scattering
+                                     # probab. is multiplied with.
+                                     # if the exceeded counter is 
+				     # not 0 after the run, increase
+                                     # this factor.
+
+scatteringintegrationboundaryfactor = 3.
+nmbrinitialisationMetropolisHastingsScattering = 1000
+
+# the following parameters are uniquely used in the model copied
+# from Shafer (2012)
+scatteringLcz = 2.
+scatteringLcr = 2.
+scatteringkz = 0.7
+#######################################################################
+
+
+#############################################################################
+# ANALYTICAL MODELS FOR TESTS
+#############################################################################
+# take vanishing ne and completly toroidal magnetic field
+# must also be set True for the models linear layer and valley 
+# (lense like medium)
+linearlayer = False
+valley = False
+# set parameter for the models
+linearlayervalleyL = 90.
+# use an analytical model for the tokamak equilibrium
+analytical_tokamak = 'No'                               
+# specify the central electron density 
+neanal = 10.	 
+deltarhopedestal = 0.015    	
+# if the following line is defined, the electron density is
+# assumed constant for values of x smaller than the indicated number
+# (to get the same model as in the full wave solver)
+cuteldensAt = 812.			   
+
+# if set to true, the 2D problem is considered 
+# (i.e. Y=0, Ny=0 for the whole ray)
+twodim = False
+
+
+

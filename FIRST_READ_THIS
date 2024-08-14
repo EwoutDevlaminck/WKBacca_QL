@@ -1,0 +1,296 @@
+
+##########################################################################
+#                                                                        #
+#      WKBeam - A Monte-Carlo solver for the wave kinetic equation       #
+#                                                                        #
+#           --- quick-start guide and basic information ---              #
+#                                                                        #
+# ---------------------------------------------------------------------- #
+#                                                                        #
+# Author:     Hannes Weber                                               #
+#             (Max Planck Institute for Plasma physics and               #
+#             Department of quantum physics, University of Ulm).         #
+#                                                                        #
+# License:    Max Planck Institute for Plasma Physics (IPP),             #
+#             Boltzmannstr. 2, Garching b. München, Germany.             #
+#                                                                        #
+# Contact:    Emanuele Poli (IPP), Emanuele.Poli@ipp.mpg.de              #
+#                                                                        #
+# Repository: URL: https://solps-mdsplus.aug.ipp.mpg.de/repos/WKBEAM     #
+#	                                                                 #
+# Year:       2013 (Beginning of the project)                            #
+#                                                                        #
+##########################################################################
+
+
+
+ CONTENTS:
+
+ 1. Getting started quickly.
+
+ 2. Description of the code.
+
+ 3. Dependencies.
+
+ 4. Structure of the code (directory tree and modules).
+
+ 5. Building the code.
+
+ 6. Testing the code installation.
+
+ 7. Running a standard case.
+
+ 8. Working with the code.
+
+
+
+
+-----------------------------------------------------------------------------
+ 1. Getting started quickly.
+-----------------------------------------------------------------------------
+
+This is a quick set of instructions to build the code and run a few
+test cases, assuming that all the required external packages are
+present on the machine. 
+
+A quick overview of the code and its dependencies is given in the 
+next sections. More documentation is available (or will be available)
+in the folder Doc.
+
+In the following we assume to have a Linux operating system. It 
+should be possible to run the code on other systems as well, but
+that is not supported and, if you wish to do so, you are on your own.
+
+The symbol "$" stands for the command line prompt while "#" denotes
+a comment; the python interpreter is generically denoted "python", but
+the user might need to change it depending on his local installation.
+
+ Building the code. 
+-------------------
+
+First edit the configuration file config.mk and set the variables 
+
+   PYINT = python  
+   FTOPY = f2py
+
+to the desired executable for the python interpreter and f2py. By default, 
+they are set to 'python' and 'f2py', but on some systems you may want to set 
+them to "python3" and "f2py3" for the python 3.x versions.
+
+From the root folder of the project run:
+
+   $ gmake code
+
+You should see that all Cython and Fortran extensions are being built.
+
+
+ Running the code interactively.
+--------------------------------
+
+The directory StadardCases contains a few examples that you could run 
+interactively at low resolution, for testing and development.
+
+The code driver is the python script WKBeam.py which MUST be run from the
+base directory of the project and takes two keyword arguments, namely,
+
+   $ python WKBeam.py <mode_flag> <input_file>
+
+Here the argument <mode_flag> specifies the type of operation the code
+should perform and <input_file> can be either a configuration file for
+the run or an input data file for post-processing operations. A list of 
+valid operation flags can be obtained by
+
+   $ python WKBeam.py
+
+with no arguments. This will print a help message.
+
+Let us assume that we want to run interactively one of the standard
+cases, e.g., the ITER test case without density fluctuations, on 4 cores. 
+Here is the sequence of commands:
+
+   # Run the ray tracing in parallel on 4 cores
+   $ mpiexec -np 4 python WKBeam.py trace StandardCases/ITER/ITER0fluct_raytracing.txt
+
+   # Bin the rays on the plane X-Z
+   $ python WKBeam.py bin StandardCases/ITER/ITER0fluct_XZ.txt
+
+   # Bin the rays in the normalized poloidal flux and compute
+   # the power deposition profile
+   $ python WKBeam.py bin StandardCases/ITER/ITER0fluct_abs.txt
+
+   # Bin the rays in phiN and produce the angular spectrum
+   $ python WKBeam.py bin StandardCases/ITER/ITER0fluct_angular.txt
+
+   # Plot the beam in the X-Z plane
+   $ python WKBeam.py plotbin StandardCases/ITER/output/ITER0fluct_binned_XZ.hdf5
+
+   # Plot the angular spectrum (it uses the same binning configuration file)
+   $ python WKBeam.py plot2d StandardCases/ITER/ITER0fluct_angular.txt
+       
+   # Plot the deposition profile (it uses the same binning configuration file)
+   $ python WKBeam.py plotabs StandardCases/ITER/ITER0fluct_abs.txt
+
+Let us note that in some cases a data file (hdf5 format) is passed to the script,
+but most of the operation modes require a configuration file. The user can refer
+to the StandardCases for a template of such configuration files.
+
+It is also instructive to run the other test cases, in particular ITER test cases 
+with different fluctuation models. The user can just repeate the instructions 
+above replacing ITER0flcut with ITER10Gauss (for 10% Gaussian fluctuations) or 
+ITER10Shafer (for 10% density fluctuation with the model of Shafer et al. 
+[Physics of Plasmas 19, 032504 (2012)].
+
+Interactive runs should have a very low resolution. As a consequence, the 
+power balance will not be satisfied. When plotting the power deposition
+profile, the total absorbed power is printed out together with some additional
+information; at low resolution it is expected that the total absorbed power
+does not match the injected power even in the case of full absorption of the
+beam. Increasing resolution, the power balance should converge.
+
+The post-processing tool for the power deposition profile works with multiple 
+files and can be used to compare power deposition profiles obtained with 
+different fluctuation models, e.g.,
+
+   # Compare different deposition profiles
+   $ python WKBeam.py plotabs StandardCases/ITER/ITER0fluct_abs.txt  \
+                              StandardCases/ITER/ITER10Gauss_abs.txt \
+			      StandardCases/ITER/ITER10Shafer_abs.txt   
+
+An effective visualization of the envelope of the turbulent fluctuations can be
+obatained invoking, e.g.,
+
+    # Visualize the fluctuation level exactly as used by WKBeam
+    $ python WKBeam.py plotfluct StandardCases/ITER/ITER10Shafer_raytracing.txt
+ 
+The result of the plotfluct function is normalized to its maximum and gives an 
+idea of where the turbulence is localized in the simulation.
+
+Analogously, one can visualize all the equilibrium parameters, e.g., by
+	     	 
+    # Visualize equilibrium parameters
+    $ python WKBeam.py ploteq StandardCases/ITER/ITER10Shafer_raytracing.txt  
+
+This will produce a plot of all the equilibrium quantities interpolated on 
+a fine grid so that the quality of the interpolation exactly as used by the 
+code can be assessed.
+
+
+ Running the code on the TOK-P cluster at IPP.
+----------------------------------------------
+
+ The most expensive part of the code is ray tracing. In order to obtain
+well converged results a large number of ray trajectories must be used,
+and correspondingly a large number of cores. This requires some sort of
+Distributed Resource Manager (DRM). On the new TOK cluster at IPP the DRM is
+SLURM (https://slurm.schedmd.com).
+
+Further information on the TOK-P cluster are available on the TOK wiki
+(login required, registered users only):
+
+ https://wiki.mpcdf.mpg.de/ipphpc/weblogin/scgi-bin/multiplex_login.py
+
+All the directives to run the ray tracing code are set in a script and
+the job is submitted to the DRM queue by
+
+   # Submit job
+   $ sbatch <jobscript>
+
+   # Check the job queue
+   $ squeue
+
+   # Check all the job for a user
+   $ squeue -u <userid>
+
+   # Check a specific job
+   $ squeue -j <jobid>
+
+   # Kill a job (remove from queue)
+   $ scancel <jobid>
+
+Here <jobscript> is a text file that should look like this:
+
+
+      #!/bin/bash -l
+      # Standard output and error:
+      #SBATCH -o <STANDARD OUTPUT FILE>
+      #SBATCH -e <STANDARD ERROR FILE>
+      # Initial working directory:
+      #SBATCH -D <INITIAL WORKING DIRECTORY>
+      # Job Name:
+      #SBATCH -J <JOB NAME>
+      # Queue (Partition): 
+      #SBATCH --partition=p.tok
+      #SBATCH --qos=<QUEUE NAME, e.g., tok.debug>
+      # Number of nodes and MPI tasks per node:
+      #SBATCH --nodes=<NUMBER OF NODES>
+      #SBATCH --ntasks-per-node=<NUMBER OF CORES PER NODE>
+      #
+      #SBATCH --mail-type=<WHEN TO SEND E-MAILS, e.g., end>
+      #SBATCH --mail-user=<USER E-MAIL ADDRESS>
+      #
+      # Wall clock limit:
+      #SBATCH --time=<RUN-TIME LIMIT, e.g., 05:00:00>
+
+      # Run the program:
+      module load anaconda
+      module load intel
+      module load impi
+      module load mpi4py
+      srun python WKBeam.py trace <RAY-TRACING FILE>
+
+
+In this example, python and related modules are provided by the default anaconda
+installation, and all expressions in angle brackets <...> should be replaced as
+appropriate for the desired run.
+
+SLURM is the DRM on the two HPC machines (draco and cobra) operated by MPCDF.
+The only difference with respect to the TOK cluster is in the job script:
+only two modules are required:
+
+
+     # Run the program:
+     module load anaconda
+     module load mpi4py
+     srun python WKBeam.py trace <RAY-TRACING FILE>
+
+
+Once the results of the ray tracing are ready, they can be post-processed.
+On the TOK cluster it is recommended to submit the binning job to the serial
+queue. The job-script for the serial run should be of the form
+
+       #!/bin/bash -l
+       # Standard output and error:
+       #SBATCH -o <STANDARD OUTPUT FILE>
+       #SBATCH -e <STANDARD ERROR FILE>
+       # Initial working directory:
+       #SBATCH -D 
+       # Job Name:
+       #SBATCH -J <JOB NAME>
+       # Queue (Partition): 
+       #SBATCH --partition=s.tok
+       #SBATCH --qos=<QUEUE NAME, e.g., s.tok.standard>
+       # Number of nodes and MPI tasks per node:
+       #SBATCH --nodes=1
+       #SBATCH --ntasks-per-node=1
+       #
+       #SBATCH --mail-type=<WHEN TO SEND E-MAILS, e.g., end>
+       #SBATCH --mail-user=<USER E-MAIL ADDRESS>
+       #
+       # Wall clock limit:
+       #SBATCH --time=<RUN-TIME LIMIT, e.g., 12:00:00>
+
+       # Run the program:
+       module load anaconda
+       module load intel
+       module load impi
+       module load mpi4py
+       srun python WKBeam.py bin <BINNING FILE>
+
+Again keywords in angle bracktes, <...>, should be replaced as appropriate.
+
+
+-----------------------------------------------------------------------------
+ 2. Description of the code.
+-----------------------------------------------------------------------------
+
+... to be completed ...

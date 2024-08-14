@@ -1,0 +1,18 @@
+This file demonstrated very briefly usage of WKBeam in hydra supercomputer. 
+
+
+This folder contains three sample batch script files for running WKBeam on hydra. Hydra queue system 
+contains various queues depending on the number of cores and time requested by the user. The queues 
+can be listed by 'llclass' -command. In this folder, we present three examples of using different 
+queues varying from one core/one node up to 1280 cores. The files are:
+
+hydra.cmd: suitable for massive simulations, this example uses 1280 cores and books them for 24 hours
+hydra_testing.cmd: from the opposite end of the spectrum, books one node/20 cores for 30 minutes
+hydra_binning.cmd: since running interactive jobs is forbidden, you have to bin the results using a batch 
+script. This example bins using one node/one core 
+
+When you have modified one of the .cmd files to suite your usage, submit the job to the queue by commanding
+'llsubmit yourscript.cmd'. You can monitor the queue by 'llq' or your own jobs by 'llq |grep username' or 
+your own queue by 'llq | grep queuename'. Queue names are listed in the first column of llclass command.
+
+

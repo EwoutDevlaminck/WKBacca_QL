@@ -1,0 +1,34 @@
+
+##########################################################################
+#                                                                        #
+#      WKBeam - A Monte-Carlo solver for the wave kinetic equation       #
+#                                                                        #
+#                        --- change log ---                              #
+#                                                                        #
+# ---------------------------------------------------------------------- #
+#                                                                        #
+# Author:     Hannes Weber                                               #
+#             (Max Planck Institute for Plasma physics and               #
+#             Department of quantum physics, University of Ulm).         #
+#                                                                        #
+# License:    Max Planck Institute for Plasma Physics (IPP),             #
+#             Boltzmannstr. 2, Garching b. München, Germany.             #
+#                                                                        #
+# Contact:    Emanuele Poli (IPP), Emanuele.Poli@ipp.mpg.de              #
+#                                                                        #
+# Repository: URL: https://solps-mdsplus.aug.ipp.mpg.de/repos/WKBEAM     #
+#	                                                                 #
+# Year:       2013 (Beginning of the project)                            #
+#                                                                        #
+##########################################################################
+
+
+
+This file is added for sake of completeness only.
+In order to viw the change log, one can just use the subversion log:
+
+ $ svn log
+
+This should provide a detailed view of the various resivions with their 
+commit message.
+

@@ -1,0 +1,197 @@
+#
+# Verification test case: Focal point in free space with scattering
+#
+#
+# Control parameters of the MC ray-tracing code
+# ---
+
+#############################################################################
+# TOKAMAK PARAMETERS AND EQUILIBRIUM
+#############################################################################
+
+equilibrium = 'Tokamak'  # equilibrium model: 
+	                 # 'Model', 'Tomakak', and 'Axisymmetric'
+
+
+rmaj = 165.                       # major and minor radius of the tokamak
+rmin = 60.
+
+# Magnetic field components. Set by default to a purely toroidal field.
+# Uncomment to set the desired values.
+# BRInt = 0.
+# BzInt = 1.
+# BtInt = -1.
+
+# directory, where the elec.dens. profile can be found and so on
+# (do not forget a trailing slash on the directory!)
+equilibriumdirectory = 'StandardCases/Cutoff/input/'
+
+
+#############################################################################
+# OUTPUT PARAMETERS
+#############################################################################
+# directory, where the result file is written
+output_dir = 'StandardCases/Cutoff/output/'
+
+# output filename
+output_filename = 'Cutoff'
+
+# if true, the first ray to be traced is the central, most probable one.
+takecentralrayfirst = False ##True
+
+# specify which information is stored in the output file
+storeNxNyNz = True
+storeNparallelphiN = True			 
+storeGroupVelocity = True
+storeCorrectionFactor = True
+storePsi = False		 
+
+# print progress
+ControlOutput = True
+
+# print every ...-th ray traced, if not defined set to 100
+PrintNmbrRays = 500
+
+#############################################################################
+# BEAM PARAMETERS
+#############################################################################
+freq = 50.   # beam freq. in GHz
+sigma = +1.  # wave mode (+1 corresponds to o-mode, -1 corresponds to x-mode)
+
+beamwidth1 = 1.5   # beamwidth (cm)
+beamwidth2 = 1.5
+
+curvatureradius1 = 10.    # curvature radius (cm)
+curvatureradius2 = 10.
+
+rayStartX = 250.            # central antenna starting point coordinates
+rayStartY = 0.
+rayStartZ = 8.
+
+antennatordeg = 0.          # antenna oriantation angles in degree
+antennapoldeg = 45.	 
+anglespecification = 'ITER'
+
+centraleta1 = 0.            # Usually should be set to zero.
+centraleta2 = 0.            # Used to launch rays with some angle to the antenna plane.
+
+
+#############################################################################
+# SOLVER AND RAY TRACING PARAMETERS
+#############################################################################
+# number of integration steps. The integration can be aborded before due to 
+# absorption or leaving the plasma. See the corresponding parameters below
+npt = 75 
+timestep = 0.1          # timestep for the integration 		 
+epsilonRegS = 1e-8	# regularisation parameter for Hamiltonian 
+                        # in case of UH-resonance		  
+integratormaxnmbrsteps = 1500   # max. number of integration steps 
+                               # for Runge-Kutta solver
+integratorreltol = 1e-7        # max. rel. tolerance for solver
+integratorabstol = 1e-7        # max. abs. tolerance for solver
+
+nmbrRays = 3000                 # number of rays to trace
+
+
+nmbrMetrHastBoundaryInit = 10000   # number of random numbers generated
+		    	           # in order to initialise the Metropolis-
+			           # Hastings alogrithm for the ray launching
+
+#############################################################################
+# SPECIAL CONDITIONS 
+#############################################################################
+# Absorption
+absorption = False             # put true if you wish to juse the absorption
+                               # coefficient as it is in a physical model
+                               # (for plasma case only)
+
+# in case, plasma is considered
+absorptionModule = 1	       # 0 --> Westerhof absorption routine used
+		               # 1 --> Farina absorption routine used
+
+			       # specify, how long before the last absorption started
+			       # it is started to compute the absorption coefficient.
+			       # Before it is set to 0.
+
+# for generic Hamiltonians
+absorptionLayerX = 120.        # absorption layer at this specified X
+
+absorptionStartEarlierThenCentralRay = 2.    # put 0 if you wish to compute absorption from 0 on          
+absorptionConsiderAsNonZeroTreshhold = 1.e-1  # treshhold when absorption is considered to
+				              # be non-necligible.
+absorptionSmallerTimestepsFactor = 10.  # when it is assumed that there is absorption,
+				        # smaller timesteps are chosen.
+
+absorptionWfctTreshhold = 0.001 # determines when the ray tracing is stopped 
+                                # because the Wfct is too small and does not 
+                                #contribute any more.
+
+
+
+
+			       # relative to the Wfct of the central ray.
+# Reflektometrie
+reflektometrie = False         # if turned on, detects when the rays 
+	       	 	       # are leaving the plasma and stopps ray tracing
+			       # using the treshhold below
+reflektometrierhoTreshhold = 1.1 # rho when tracing is stopped.
+
+
+
+
+#############################################################################
+# SCATTERING
+#############################################################################
+# set True in the following line if you wish to turn on the scattering.
+scattering = True
+# scattering model
+scatteringGaussian = True
+
+# set True if you wish to turn on the cross-polarization scattering.
+CrossPolarizationScatt = True
+
+# set the parameters used for the model for plasma
+#######################################################################
+scatteringLengthPerp = 0.5            # correlation length
+scatteringLengthParallel = 10000.
+
+scatteringLambda = 1.              # parameters. Refer to model
+scatteringDelta = 100.            
+scatteringrhocentral = 1.          # where the scattering layer is centered
+
+scatteringDeltaneOverne = lambda ne,rho,theta: 0.5*np.exp(-(rho-1.305)**2/0.02**2)
+
+scatteringMaxProbGuessFactor = 5.    # factor the max. scattering
+                                     # probab. is multiplied with.
+                                     # if the exceeded counter is 
+				     # not 0 after the run, increase
+                                     # this factor.
+
+scatteringintegrationboundaryfactor = 3.
+nmbrinitialisationMetropolisHastingsScattering = 1000
+#######################################################################
+
+
+#############################################################################
+# ANALYTICAL MODELS FOR TESTS
+#############################################################################
+# take vanishing ne and completly toroidal magnetic field
+analytical_tokamak = 'Yes'
+
+# ... type of analytical model ...
+analytical_tokamak_ne_model = 'linear'
+
+# ... model parameters depends on the chosen model ...
+ne_model_parameters = [10., 230., 245.] # = [NE, X1, X2]
+
+# must also be set True for the models linear layer and valley 
+# (lense like medium)
+linearlayer = False
+valley = False
+
+# if set to true, the 2D problem is considered 
+# (i.e. Y=0, Ny=0 for the whole ray)
+twodim = True
+
+
+

@@ -1,0 +1,71 @@
+#-------------------------------#
+
+def Trapping_boundary_v2(ksi, B_at_psi, BR_at_psi, BZ_at_psi, Bphi_at_psi, theta_grid=[], eps = np.finfo(np.float32).eps):
+    # Implementation from DKE (2004) p. 134
+
+    TrapB = np.zeros_like(ksi)
+    theta_roots = np.zeros((len(ksi), 2))
+
+    BInt_at_psi = interp1d(theta_grid, B_at_psi)    # Used for approximate position of the trapping boundary
+
+    B0, Bmax = minmaxB(BInt_at_psi, theta_grid)
+    TrapB = B0/(1-ksi**2) # Might revision, if ksi==-1 or 1, you need B0/(1-ksi**2 + eps)
+    Trapksi = np.sqrt(1-B0/Bmax)
+
+    for j, ksi_val in enumerate(ksi):
+        if abs(ksi_val) <= Trapksi:
+
+            # Top trapping boundary
+            index_under = np.where(B_at_psi<TrapB[j])[0][-1]
+            print(index_under)
+            index_over = index_under + 1
+
+            Y = BR_at_psi[index_under]*BR_at_psi[index_over] + \
+                BZ_at_psi[index_under]*BZ_at_psi[index_over] + \
+                Bphi_at_psi[index_under]*Bphi_at_psi[index_over]
+            
+            alpha_b_plus = (np.sqrt((Y - TrapB[j]**2)**2-(TrapB[j]**2- B_at_psi[index_under]**2)*(TrapB[j]**2- B_at_psi[index_over]**2))\
+                            + B_at_psi[index_under]**2 - Y)\
+                            /(B_at_psi[index_under]**2 + B_at_psi[index_over]**2 - 2*Y)
+            print(f'alpha_b_plus={alpha_b_plus}')
+            if alpha_b_plus < 0 or alpha_b_plus > 1:
+                alpha_b_minus = -(-np.sqrt((Y - TrapB[j]**2)**2-(TrapB[j]**2- B_at_psi[index_under]**2)*(TrapB[j]**2- B_at_psi[index_over]**2))\
+                                + B_at_psi[index_under]**2 - Y)\
+                                /(B_at_psi[index_under]**2 + B_at_psi[index_over]**2 - 2*Y)
+                print(f'alpha_b_minus={alpha_b_minus}')
+                
+                theta_roots[j, 1] = theta_grid[index_under] + alpha_b_minus*(theta_grid[index_over] - theta_grid[index_under])
+            else:
+                theta_roots[j, 1] = theta_grid[index_under] + alpha_b_plus*(theta_grid[index_over] - theta_grid[index_under])
+
+            # Bottom trapping boundary
+
+            index_over = np.where(B_at_psi<TrapB[j])[0][1]
+            print(index_over)
+            index_under = index_over - 1
+
+            Y = BR_at_psi[index_under]*BR_at_psi[index_over] + \
+                BZ_at_psi[index_under]*BZ_at_psi[index_over] + \
+                Bphi_at_psi[index_under]*Bphi_at_psi[index_over]
+            
+            alpha_b_plus = (np.sqrt((Y - TrapB[j]**2)**2-(TrapB[j]**2- B_at_psi[index_under]**2)*(TrapB[j]**2- B_at_psi[index_over]**2))\
+                            + B_at_psi[index_under]**2 - Y)\
+                            /(B_at_psi[index_under]**2 + B_at_psi[index_over]**2 - 2*Y)
+            print(f'alpha_b_plus={alpha_b_plus}')
+            if alpha_b_plus < 0 or alpha_b_plus > 1:
+                alpha_b_minus = (-np.sqrt((Y - TrapB[j]**2)**2-(TrapB[j]**2- B_at_psi[index_under]**2)*(TrapB[j]**2- B_at_psi[index_over]**2))\
+                                + B_at_psi[index_under]**2 - Y)\
+                                /(B_at_psi[index_under]**2 + B_at_psi[index_over]**2 - 2*Y)
+                print(f'alpha_b_minus={alpha_b_minus}')
+                
+                theta_roots[j, 0] = theta_grid[index_under] + alpha_b_minus*(theta_grid[index_over] - theta_grid[index_under])
+            else:
+                theta_roots[j, 0] = theta_grid[index_under] + alpha_b_plus*(theta_grid[index_over] - theta_grid[index_under])
+
+        else:
+            theta_roots[j, 0] = -np.pi
+            theta_roots[j, 1] = np.pi
+
+        print(f'j={j}, theta_roots[j]={theta_roots[j]}')
+
+    return TrapB, Trapksi, theta_roots

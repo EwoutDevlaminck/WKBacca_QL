@@ -135,7 +135,7 @@ def minmaxB(BInt_at_psi, theta):
     minimum = minimize(BInt_at_psi, 0.)
     maximum = minimize(minusB_at_psiInt, -3)
 
-    # Return the interpolated function, the minimum and maximum
+    # Return the minimum and maximum
 
     return BInt_at_psi(minimum.x), BInt_at_psi(maximum.x)
 
@@ -146,11 +146,12 @@ def Trapping_boundary(ksi, BInt_at_psi, theta_grid=[], eps = np.finfo(np.float32
     theta_roots = np.zeros((len(ksi), 2))
 
     B0, Bmax = minmaxB(BInt_at_psi, theta_grid)
-    TrapB = B0/(1-ksi**2 + eps)
+    TrapB = B0/(1-ksi**2) # Might revision, if ksi==-1 or 1, you need B0/(1-ksi**2 + eps)
     Trapksi = np.sqrt(1-B0/Bmax)
 
     for j, ksi_val in enumerate(ksi):
         if abs(ksi_val) <= Trapksi:
+
             def deltaB(x):
                 return BInt_at_psi(x) - TrapB[j]
 
@@ -476,7 +477,6 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
     # Precalculate quantities in configuration space
     Rp, Zp = Eq.magn_axis_coord_Rz
     ptR, ptZ, ptBt, ptBR, ptBz, ptB, ptNe, ptTe, P, X, R, L, S = config_quantities(psi, theta, omega, Eq)
-    print(X)
 
     #--------------------------------#
     #---Initialision of grids---#
@@ -518,7 +518,7 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
         # as the calculation is independent for every psi value
 
         ptB_Int_at_psi = interp1d(theta, ptB[l, :])
-        
+
         _, Trapksi_w[l], theta_T_w[l] = Trapping_boundary(ksi_w, ptB_Int_at_psi, theta)
         _, Trapksi_h[l], theta_T_h[l] = Trapping_boundary(ksi_h, ptB_Int_at_psi, theta)
 
@@ -659,6 +659,10 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
             B_ratio_h = B_at_psi_j_h/B0_h
 
             if np.any(B_ratio_h*(1-ksi_val**2) > 1):
+                a = B_ratio_h*(1-ksi_val**2)
+                print(f'At psi = {psi_l}, theta = {theta_t}, ksi = {ksi_val}, B_ratio_h*(1-ksi_val**2) > 1')
+                print(f'At indices {np.where(a > 1)} the value is {a[np.where(a > 1)]}')
+
                 # Invalid value, very trapped particles. Skip for now xx
                 #ksi0_over_ksi_j_h = np.where(B_ratio_h*(1-ksi_val**2) > 1, np.nan, ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_h*(1-ksi_val**2))))
                 ksi0_over_ksi_j_h = np.nan

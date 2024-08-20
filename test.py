@@ -3,7 +3,7 @@ from QL_bounce_calc_v2 import *
 import warnings
 warnings.filterwarnings("ignore") # Fuck around until I find out
 p_norm = np.linspace(0, 30, 20)
-ksi = np.linspace(-.999, .999, 20)
+ksi = np.linspace(-.999, .999, 30)
 
 # We need a binning of the data according to the original liuqe/LUKE grids!
 # For now the liuqe grid, but later ideally we'll have the LUKE one

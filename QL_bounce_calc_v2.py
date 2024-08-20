@@ -146,7 +146,7 @@ def Trapping_boundary(ksi, BInt_at_psi, theta_grid=[], eps = np.finfo(np.float32
     theta_roots = np.zeros((len(ksi), 2))
 
     B0, Bmax = minmaxB(BInt_at_psi, theta_grid)
-    TrapB = B0/(1-ksi**2) # Might revision, if ksi==-1 or 1, you need B0/(1-ksi**2 + eps)
+    TrapB = B0/(1-ksi**2 + eps) # Might revision, is eps needed?
     Trapksi = np.sqrt(1-B0/Bmax)
 
     for j, ksi_val in enumerate(ksi):
@@ -184,7 +184,7 @@ def gamma(p, pTe):
     return np.sqrt(1 + (p*pTe)**2)
 
 @jit(nopython=True)
-def N_par_resonant(inv_kp, p_Te, Gamma, X, harm, eps):
+def N_par_resonant(inv_kp, p_Te, Gamma, X, harm):
     """
     Calculate the resonant n_par. P_norm, Ksi and Gamma are of shape (n_p x n_ksi), StixY is a scalar.
     Returns a matrix of the same shape as P_norm.
@@ -262,7 +262,7 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
         # resonance_N_par gives a 2D array with the same shape as P_norm and Ksi
         # This whole calculation is done dimensionless now. 
 
-        resonance_N_par = N_par_resonant(inv_kp, p_Te, Gamma, X, harm, eps)
+        resonance_N_par = N_par_resonant(inv_kp, p_Te, Gamma, X, harm)
 
         # We can now query the KDTree to get the indices of the resonant values in Npar.
         # The code below efficiently looks for the index of the value in Npar that is closest to the resonant value.
@@ -393,8 +393,6 @@ def bounce_sum(d_theta_grid_j, CB_j, Func, passing, sigma_dep=False):
     if passing or not sigma_dep:
         # Even if it is trapped, when there's no explicit sigma dependence, we can just sum over the grid
         # Instead of summing over both signs of ksi
-
-        # SKIPPING THE NAN VALUES FOR NOW
         return np.nansum(d_theta_grid_j/(2*np.pi) * CB_j * Func)
     else:
         return 1/2* (np.nansum(d_theta_grid_j/(2*np.pi) * CB_j * Func) + np.sum(d_theta_grid_j/(2*np.pi) * CB_j * -Func))
@@ -458,6 +456,12 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
     # Calculate the normalised momentum and pitch angle on the half grid
     p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
     ksi_h = 0.5 * (ksi_w[1:] + ksi_w[:-1])
+    
+    # Precaution to not have exactly 0 values in the grid for ksi, as this would be
+    # infintely trapped particles
+    # Hopefully will not be needed in final implementation, if LUKE grids are ok.
+    ksi_h[abs(ksi_h)<1e-4] = 1e-4
+    ksi_w[abs(ksi_w)<1e-4] = 1e-4
 
     # widths of half grid are easy. Only defined in the proper region
     d_p_norm_h = np.diff(p_norm_w)
@@ -632,10 +636,16 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
 
                 # Add the trapped points to the theta grid
                 theta_aux = theta[int(indices_m_h[j]+1):int(indices_M_h[j])-1]
-                theta_grid_j_h = np.concatenate(([theta_T_h[l, j, 0]], theta_aux, [theta_T_h[l, j, 1]]))
+                theta_aux = np.concatenate(([theta_T_h[l, j, 0]], theta_aux, [theta_T_h[l, j, 1]]))
                 # Get the grid spacing as well
-                d_theta_grid_j_h = 1/2* (np.diff(theta_grid_j_h)[:-1] + np.diff(theta_grid_j_h)[1:])
-                d_theta_grid_j_h = np.concatenate(([np.diff(theta_grid_j_h)[0]/2], d_theta_grid_j_h, [np.diff(theta_grid_j_h)[-1]/2]))
+                d_theta_aux = 1/2* (np.diff(theta_aux)[:-1] + np.diff(theta_aux)[1:])
+                d_theta_aux = np.concatenate(([np.diff(theta_aux)[0]/2], d_theta_aux, [np.diff(theta_aux)[-1]/2]))
+
+                #Update: Try to follow DKEp134 on the numerical integration, we need the half grid!
+                # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
+
+                theta_grid_j_h = 0.5 * (theta_aux[1:] + theta_aux[:-1])
+                d_theta_grid_j_h = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
 
                 B0_h, _               = minmaxB(ptB_Int_at_psi, theta)
                 B_at_psi_j_h          = interp1d(theta, ptB[l, :], kind='cubic')(theta_grid_j_h)
@@ -651,27 +661,42 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
                 D_rf_lj_hh = np.concatenate((D_RF_nobounce_hh_at_T[:, :,j, 0],\
                     D_rf_nobounce_hh[l, int(indices_m_h[j]+1):int(indices_M_h[j])-1, :, j], D_RF_nobounce_hh_at_T[:, :,j, 0]), axis=0)
 
+                # Also interpolate the D_RF_nobounce matrices to the bounce grid
+                D_rf_lj_wh = 0.5 * (D_rf_lj_wh[1:, :] + D_rf_lj_wh[:-1, :])
+                D_rf_lj_hh = 0.5 * (D_rf_lj_hh[1:, :] + D_rf_lj_hh[:-1, :])
+
+
             # Calculate the internal factor of the bounce integral [t]
             CB_j_h = B_at_psi_j_h * (R_axis_at_psi_j_h**2 + Z_axis_at_psi_j_h**2)\
-                  / (Rp * abs(BR_at_psi_j_h*Z_axis_at_psi_j_h - Bz_at_psi_j_h*R_axis_at_psi_j_h) + eps)
+                  / (Rp * abs(BR_at_psi_j_h*Z_axis_at_psi_j_h - Bz_at_psi_j_h*R_axis_at_psi_j_h))# + eps)
             
             # And the B/B0 ratio [t]
             B_ratio_h = B_at_psi_j_h/B0_h
+            B_ratio_h = np.where(B_ratio_h < 1., 1. + eps, B_ratio_h)
 
+            """
             if np.any(B_ratio_h*(1-ksi_val**2) > 1):
                 a = B_ratio_h*(1-ksi_val**2)
-                print(f'At psi = {psi_l}, theta = {theta_t}, ksi = {ksi_val}, B_ratio_h*(1-ksi_val**2) > 1')
+                print(f'At psi = {psi_l}, ksi = {ksi_val}, B_ratio_h*(1-ksi_val**2) > 1')
                 print(f'At indices {np.where(a > 1)} the value is {a[np.where(a > 1)]}')
 
                 # Invalid value, very trapped particles. Skip for now xx
                 #ksi0_over_ksi_j_h = np.where(B_ratio_h*(1-ksi_val**2) > 1, np.nan, ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_h*(1-ksi_val**2))))
                 ksi0_over_ksi_j_h = np.nan
             else:
+            """
             # ... and the ksi0/ksi factor [t]
-                ksi0_over_ksi_j_h = ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_h*(1-ksi_val**2)))
+
+            ksi0_over_ksi_j_h = ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_h*(1-ksi_val**2)))
+
+
+            ksi0_over_ksi_j_h = np.where(ksi0_over_ksi_j_h < 1., 1. + eps, ksi0_over_ksi_j_h)
 
             # Calculate the lambda*q factor
             lambda_q_h[l, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, ksi0_over_ksi_j_h, passing, False)
+
+            if np.isnan(lambda_q_h[l, j]):
+                print(f'At psi = {psi_l}, ksi = {ksi_val}, lambda_q_h is nan')
 
 
             # Calculate the configuration space volume element. [t]
@@ -693,7 +718,8 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
                 DRF0_wh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i] , passing, False)
                 DRF0D_wh[l, i, j] = np.sign(ksi_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_wh[:, i] , passing, True)
                 DRF0F_wh[l, i, j] = np.sign(ksi_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0F_integrand*D_rf_lj_wh[:, i] , passing, True)
-
+                if np.isnan(DRF0_wh[l, i, j]):
+                    print(f'At psi = {psi_l}, ksi = {ksi_val}, DRF0_wh is nan')
             for i, _ in enumerate(p_norm_h):
                 DRF0_hh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_hh[:, i] , passing, False)
                 DRF0D_hh[l, i, j] = np.sign(ksi_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_hh[:, i] , passing, True)
@@ -733,10 +759,16 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
                 passing = False
 
                 theta_aux = theta[int(indices_m_w[j]+1):int(indices_M_w[j])-1]
-                theta_grid_j_w = np.concatenate(([theta_T_w[l, j, 0]], theta_aux, [theta_T_w[l, j, 1]]))
+                theta_aux = np.concatenate(([theta_T_w[l, j, 0]], theta_aux, [theta_T_w[l, j, 1]]))
                 # Get the grid spacing as well
-                d_theta_grid_j_w = 1/2* (np.diff(theta_grid_j_w)[:-1] + np.diff(theta_grid_j_w)[1:])
-                d_theta_grid_j_w = np.concatenate(([np.diff(theta_grid_j_w)[0]/2], d_theta_grid_j_w, [np.diff(theta_grid_j_w)[-1]/2]))
+                d_theta_aux = 1/2* (np.diff(theta_aux)[:-1] + np.diff(theta_aux)[1:])
+                d_theta_aux = np.concatenate(([np.diff(theta_aux)[0]/2], d_theta_aux, [np.diff(theta_aux)[-1]/2]))
+
+                #Update: Try to follow DKEp134 on the numerical integration, we need the half grid!
+                # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
+
+                theta_grid_j_w = 0.5 * (theta_aux[1:] + theta_aux[:-1])
+                d_theta_grid_j_w = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
 
                 B0_w, _               = minmaxB(ptB_Int_at_psi, theta)
                 B_at_psi_j_w          = interp1d(theta, ptB[l, :], kind='cubic')(theta_grid_j_w)
@@ -750,22 +782,25 @@ def D_RF(psi, theta, p_norm_w, ksi_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=8
 
                 D_rf_lj_hw = np.concatenate((D_RF_nobounce_hw_at_T[:, :,j, 0],\
                     D_rf_nobounce_hw[l, int(indices_m_w[j]+1):int(indices_M_w[j])-1, :, j], D_RF_nobounce_hw_at_T[:, :,j, 0]), axis=0)
-            
+
+                # Also interpolate the D_RF_nobounce matrices to the bounce grid
+                D_rf_lj_hw = 0.5 * (D_rf_lj_hw[1:, :] + D_rf_lj_hw[:-1, :])
+
             # Calculate the internal factor of the bounce integral [t]
             CB_j_w = B_at_psi_j_w * (R_axis_at_psi_j_w**2 + Z_axis_at_psi_j_w**2)\
-                  / (Rp * abs(BR_at_psi_j_w*Z_axis_at_psi_j_w - Bz_at_psi_j_w*R_axis_at_psi_j_w) + eps)
+                  / (Rp * abs(BR_at_psi_j_w*Z_axis_at_psi_j_w - Bz_at_psi_j_w*R_axis_at_psi_j_w)) #+ eps)
             
             # And the B/B0 ratio [t]
             B_ratio_w = B_at_psi_j_w/B0_w
+            B_ratio_w = np.where(B_ratio_w < 1., 1. + eps, B_ratio_w)
 
-            if np.any(B_ratio_w*(1-ksi_val**2) > 1):
-                # Invalid value, very trapped particles. Skip for now xx
-                ksi0_over_ksi_j_w = np.nan
-            else:
-                # ... and the ksi0/ksi factor [t]
-                ksi0_over_ksi_j_w = ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_w*(1-ksi_val**2)))
-                #ksi0_over_ksi_j_w = np.where(B_ratio_w*(1-ksi_val**2) > 1, np.nan, ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_w*(1-ksi_val**2))))
+            # ... and the ksi0/ksi factor [t]
+            ksi0_over_ksi_j_w = ksi_val / (np.sign(ksi_val) * np.sqrt(1 - B_ratio_w*(1-ksi_val**2)))
 
+            # Adjust for individual error coming from the interpolation of B.
+            # This ratio should always be greater than 1, as the B field is always smaller than the minimal value
+            # Then it is set to 1 + eps, to avoid division by zero
+            ksi0_over_ksi_j_w = np.where(ksi0_over_ksi_j_w < 1., 1. + eps, ksi0_over_ksi_j_w)
 
                 
             lambda_q_w[l, j] = bounce_sum(d_theta_grid_j_w, CB_j_w, ksi0_over_ksi_j_w, passing, False)
@@ -835,7 +870,7 @@ if __name__ == '__main__':
 
     if prank == 0:
 
-        filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL_dev_git/WKBacca_cases/TCV72644/t_1.05/output/L1_binned_QL.hdf5'
+        filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV72644/t_1.05/output/L1_binned_QL.hdf5'
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
 
         # TEMPORARY NORMALISATION OF Wfct
@@ -843,7 +878,7 @@ if __name__ == '__main__':
 
         psi = rho**2
 
-        filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL_dev_git/WKBacca_cases/TCV72644/t_1.05/L1_raytracing.txt'
+        filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644/t_1.05/L1_raytracing.txt'
 
         idata = InputData(filename_Eq)
         Eq = TokamakEquilibrium(idata)

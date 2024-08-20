@@ -870,7 +870,7 @@ if __name__ == '__main__':
 
     if prank == 0:
 
-        filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV72644/t_1.05/output/L1_binned_QL.hdf5'
+        filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV72644/t_1.05/Output_fluct/L1_binned_QL.hdf5'
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
 
         # TEMPORARY NORMALISATION OF Wfct
@@ -967,7 +967,7 @@ if __name__ == '__main__':
         print(f'Time taken: {toc-tic:.2f} s')
 
         # Save the data
-        with h5py.File('QL_bounce_v3.h5', 'w') as file:
+        with h5py.File('QL_bounce_TCV72644_fluct.h5', 'w') as file:
             file.create_dataset('psi', data=psi)
             file.create_dataset('theta', data=theta)
             file.create_dataset('ksi', data=ksi)

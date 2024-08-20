@@ -30,8 +30,6 @@ def read_h5file(filename):
     """
     file            = h5py.File(filename, 'r')
 
-    print('Keys:', list(file.keys()))
-
     WhatToResolve   = file.get('WhatToResolve')[()]
     FreqGHz         = file.get('FreqGHz')[()]
     mode            = file.get('Mode')[()]
@@ -47,40 +45,17 @@ def read_h5file(filename):
     except:
         EnergyFlux = None
 
-    """
+    
     rhomin          = file.get('rhomin')[()]
     rhomax          = file.get('rhomax')[()]
     nmbrrho         = file.get('nmbrrho')[()]
     rho             = np.linspace(rhomin, rhomax, nmbrrho)
-    """
-
-    Psimin          = file.get('Psimin')[()]
-    Psimax          = file.get('Psimax')[()]
-    nmbrPsi         = file.get('nmbrPsi')[()]
-    Psi             = np.linspace(Psimin, Psimax, nmbrPsi)
 
     Thetamin        = file.get('Thetamin')[()]
     Thetamax       = file.get('Thetamax')[()]
     nmbrTheta        = file.get('nmbrTheta')[()]
     Theta           = np.linspace(Thetamin, Thetamax, nmbrTheta)
 
-    """
-    Nxmin           = file.get('Nxmin')[()]
-    Nxmax           = file.get('Nxmax')[()]
-    nmbrNx          = file.get('nmbrNx')[()]
-    Nx              = np.linspace(Nxmin, Nxmax, nmbrNx)
-
-    Nymin           = file.get('Nymin')[()]
-    Nymax           = file.get('Nymax')[()]
-    nmbrNy          = file.get('nmbrNy')[()]
-    Ny              = np.linspace(Nymin, Nymax, nmbrNy)
-
-    Nzmin           = file.get('Nzmin')[()]
-    Nzmax           = file.get('Nzmax')[()]
-    nmbrNz          = file.get('nmbrNz')[()]
-    Nz              = np.linspace(Nzmin, Nzmax, nmbrNz)
-    """
-    
     Nparallelmin    = file.get('Nparallelmin')[()]
     Nparallelmax    = file.get('Nparallelmax')[()]
     nmbrNparallel   = file.get('nmbrNparallel')[()]
@@ -90,20 +65,10 @@ def read_h5file(filename):
     Nperpmax        = file.get('Nperpmax')[()]
     nmbrNperp       = file.get('nmbrNperp')[()]
     Nperp          = np.linspace(Nperpmin, Nperpmax, nmbrNperp)
-    """
-    phiNmin         = file.get('phiNmin')[()]
-    phiNmax         = file.get('phiNmax')[()]
-    nmbrphiN        = file.get('nmbrphiN')[()]
-    phiN           = np.linspace(phiNmin, phiNmax, nmbrphiN)
-    """
 
-
-    print('WhatToResolve:', WhatToResolve)
-    print('FreqGHz:', FreqGHz)
-    print('mode:', mode)
     file.close()
 
-    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, Psi, Theta, Nparallel, Nperp
+    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, Theta, Nparallel, Nperp
 
 ##################
   
@@ -135,16 +100,8 @@ eV2K        = 11604.52500617
 # epsilon_0
 epsilon_0   = 8.854187817e-12
 
-# Normalisation factor for D_rf needs this
-
-e0_over_mc2 =  epsilon_0 / (m_e * c**2)
-
 # plasma frequency conversion
 wp_conv    = e**2 / (m_e * epsilon_0)
-
-# Coulomb logarithm
-
-lnCoulomb = 20
 
 ###############################
 
@@ -216,11 +173,6 @@ def QL_diff(E_sq, psi, theta, ksi, p_norm, npar, nperp, Eq, n=[2, 3], freq=82.7)
     P_norm, Ksi = np.meshgrid(p_norm, ksi)
     P_par, P_perp = P_norm * Ksi, P_norm * np.sqrt(1 - Ksi**2)
 
-    pksi_inverse = 1/(P_norm * abs(Ksi))
-    pksi_inverse = np.where(pksi_inverse>5, 5, pksi_inverse)
-    pksi_inverse = np.where(np.isnan(pksi_inverse), 5, pksi_inverse)
-
-
 
     # Something else we can already do, is make the KDtree for Npar. This will help us to quickly perform the Kronecker delta function.
 
@@ -240,14 +192,9 @@ def QL_diff(E_sq, psi, theta, ksi, p_norm, npar, nperp, Eq, n=[2, 3], freq=82.7)
 
     for i_psi, psi_val in enumerate(psi):
         for i_theta, theta_val in enumerate(theta):
-
-            # Implement the mask for wether the angle is accsesible beofre bouncing here!
-            # Ksi_accesible = np.where(..., True, False)
-
             # For reasons discussed in the notes, the iterations over rho and theta are done explicitly.
 
-            # Have to devide by the Jacobian! 
-            # This is because we already get the energy density (J/m^3) as a result from WKBeam if all goes well, but then still need this volume.
+            # STILL MISSING DV 
             Jacobian = Eq.volume_element_J(theta_val, psi_val)
             V = Jacobian * dpsi * dtheta # Volume element in the grid
 
@@ -296,7 +243,7 @@ def QL_diff(E_sq, psi, theta, ksi, p_norm, npar, nperp, Eq, n=[2, 3], freq=82.7)
                 res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
 
                 
-                if i_psi == 1 and i_theta == 100:
+                if i_psi == 0 and i_theta == 100:
                     fig = plt.figure()
                     pl = plt.contour(P_par, P_perp, resonance_N_par, levels=np.linspace(-1, 1, 11), cmap='coolwarm')
                     if np.any(res_condition_N_par == -1):
@@ -310,15 +257,14 @@ def QL_diff(E_sq, psi, theta, ksi, p_norm, npar, nperp, Eq, n=[2, 3], freq=82.7)
                     
 
                 res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in P_norm and Ksi
-                # Add the extra mask on top of this one, to exclude inaccessible angles 
                 i_Ksi_res, i_P_res = np.where(res_mask_Pspace) # Tuple containing 2 arrays.
                 # The first array contains the indices of the resonant values in P_norm, the second in Ksi.
 
                 # We can now use the mask to select the resonant values in P_norm and Ksi, and calculate the integrand. 
                 # Where there is no Npar value resonant, we can skip the calculation.
 
-                for i_P, i_Ksi in zip(i_P_res, i_Ksi_res):
 
+                for i_P, i_Ksi in zip(i_P_res, i_Ksi_res):
                     i_npar = res_condition_N_par[i_Ksi, i_P]
                     # At this point, we check |E|² to see if at rho_val, theta_val, Npar[i_npar] (for this P,Ksi), the beam is present.
                     # And if so, for what value of Nperp.
@@ -350,13 +296,7 @@ def QL_diff(E_sq, psi, theta, ksi, p_norm, npar, nperp, Eq, n=[2, 3], freq=82.7)
                             QL_nobounce[i_psi, i_theta, i_Ksi, i_P] += Nperp[i_nperp] * Pol_term * E_sq[i_psi, i_theta, i_npar, i_nperp, 0]
                     
             # Multiply by the correct prefactor
-            # Not implemented yet
-            QL_nobounce[i_psi, i_theta] *= 1/V
-
-
-        # All point for a given rho have been calculated, now perform the bounce average
-
-        
+            QL_nobounce[i_psi, i_theta] *= e**2 /(4*np.pi * V)
 
     return QL_nobounce, P_par, P_perp, R2d, Z2d
                         
@@ -390,7 +330,6 @@ if __name__ == '__main__':
     Nperp = None
     Eq = None
 
-
     if prank == 0:
 
 
@@ -413,7 +352,7 @@ if __name__ == '__main__':
         Eq = TokamakEquilibrium(idata)
 
         # Define the grid for the calculation
-        p_norm = np.linspace(0, 30, 200)
+        p_norm = np.linspace(0, 15, 300)
         ksi = np.linspace(-1, 1, 200)
 
         # Easily split the work by splitting the psi values
@@ -450,7 +389,7 @@ if __name__ == '__main__':
 
 
 
-    local_QL, P_par, P_perp, local_R2d, local_Z2d = QL_diff(local_Wfct, local_psi, theta, ksi, p_norm, Npar, Nperp, Eq,  n=[2,3], freq=FreqGHz)
+    local_QL, P_par, P_perp, local_R2d, local_Z2d = QL_diff(local_Wfct, local_psi, theta, ksi, p_norm, Npar, Nperp, Eq,  n=[2], freq=FreqGHz)
 
     # Gather the results
 
@@ -496,19 +435,18 @@ if __name__ == '__main__':
         ax.set_aspect('equal')
         plt.colorbar(RFfield, label='RF field')
         
-        
+
         fig = plt.figure(figsize=(10, 10))
         for i in range(20):
             ax = fig.add_subplot(5, 4, i+1)
-            ql_plot = ax.contourf(P_par, P_perp, QL_bounce[i], levels=100)
+            ql_plot = ax.contourf(P_par, P_perp, QL_bounce[i]/QL_bounce_max, levels=100)
             #ax.set_title(f'psi = {psi[i]:.2f}')
             ax.set_title(f'rho = {np.sqrt(psi[i]):.2f}')
             ax.set_xlabel(r'$p_\|/p_{Te}$')
             ax.set_ylabel(r'$p_\perp/_{Te}$')
-            if i == 10:
+            if i == 0:
                 plt.colorbar(ql_plot, label='QL')
         plt.tight_layout()
-        
             
         plt.show()
 

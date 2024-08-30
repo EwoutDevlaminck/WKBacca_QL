@@ -99,10 +99,10 @@ def config_quantities(psi, theta, omega, Eq):
         for t, theta_t in enumerate(theta):
             ptR[l, t], ptZ[l, t] = Eq.flux_to_grid_coord(psi_l, theta_t)
 
-            ptNe[l, t] = Eq.NeInt.eval(ptR[l, t], ptZ[l, t])
-            ptTe[l, t] = Eq.TeInt.eval(ptR[l, t], ptZ[l, t])
+            ptNe[l, t] = Eq.NeInt.eval(ptR[l, t], ptZ[l, t]) # 1e19 m⁻3
+            ptTe[l, t] = Eq.TeInt.eval(ptR[l, t], ptZ[l, t]) # keV
 
-            ptBt[l, t] = Eq.BtInt.eval(ptR[l, t], ptZ[l, t])
+            ptBt[l, t] = Eq.BtInt.eval(ptR[l, t], ptZ[l, t]) # T
             ptBR[l, t] = Eq.BRInt.eval(ptR[l, t], ptZ[l, t])
             ptBz[l, t] = Eq.BzInt.eval(ptR[l, t], ptZ[l, t])
 
@@ -217,19 +217,25 @@ def bessel_integrand(n, x):
 #---Functions for the prefactor of bounce averaged D_RF matrices---#
 #-------------------------------#
 
-def D_RF_prefactor(p_norm, ksi, Ne, Te, omega, eps):
+def D_RF_prefactor(p_norm, ksi0, Ne, Te, omega, eps):
+    #print(f'omega: {omega}')
     omega_pe = disp.disParamomegaP(Ne)
+    #print(f'omega_pe: {omega_pe}')
     p_Te = pTe_from_Te(Te)
+    #print(f'p_Te: {p_Te}')
     Gamma_Te = gamma(1, p_Te)
-    v_Te = p_Te / Gamma_Te / m_e
-    coulomb_log = 25.2 - 0.5 * np.log(Ne) + np.log(Te) # Probably wrong, right now DKE 6.50 with n_e* in 1e19 m⁻3 and T_e in keV
-
-    P_norm, Ksi = np.meshgrid(p_norm, ksi)
+    #print(f'Gamma_Te: {Gamma_Te}')
+    v_Te = p_Te / Gamma_Te * c # Thermal velocity in m/s
+    #print(f'v_Te: {v_Te}')
+    #print(f'beta: {v_Te/c}')
+    coulomb_log = 31.3 - 0.5 * np.log(1e19*Ne) + np.log(1e3*Te) # Probably wrong, right now DKE 6.50 with n_e* in 1e19 m⁻3 and T_e in keV
+    #print(f'coulomb_log: {coulomb_log}')
+    P_norm, Ksi0 = np.meshgrid(p_norm, ksi0)
     Gamma = gamma(P_norm, p_Te)
-    inv_kabsp = 1 / (abs(Ksi) * P_norm + eps)
+    inv_kabsp = 1 / (abs(Ksi0) * P_norm + eps)
 
-    prefac =  2 * (c/omega)**4 * Gamma * inv_kabsp * v_Te / (omega_pe**2 * coulomb_log * Gamma_Te**2)
-
+    prefac =  2 * Gamma * inv_kabsp / (m_e * omega_pe**2 * coulomb_log * Gamma_Te**3)  * (c/omega)#**4
+    #print(f'prefac: {prefac}')
     return prefac.T
 
 #-------------------------------#
@@ -250,7 +256,7 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
     inv_kp = 1 / (ksi * p_norm + eps)
 
     # Calculate the relativistic factor, given the thermal momentum at this location
-    p_Te = pTe_from_Te(Te)
+    p_Te = pTe_from_Te(Te) # Normalised to m_e*c
     Gamma = gamma(p_norm, p_Te)
 
     # Initialise the integrand
@@ -314,59 +320,6 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
 
     return D_RF_integrand
 
-#-------------------------------#
-#---Function for the calculation of D_RF at trapping boundaries---#
-#-------------------------------#
-
-def D_RF_at_T(theta, p_norm, ksi, npar, nperp, Trapksi, theta_T, Wfct, Te, P, XInt, RInt, LInt, SInt, n):
-
-    D_RF_at_trapping = np.zeros((len(p_norm), len(ksi), 2))
-    indices_m = np.zeros(len(ksi))
-    indices_M = np.zeros(len(ksi))
-
-    for j, ksi_val in enumerate(ksi):
-        if abs(ksi_val) < Trapksi:
-            # We have to calculate the D_RF_nobounce matrix for this point
-            # If it was larger than the trapping boundary, we can skip this calculation because it's passing
-            
-            # Interpolate all needed quatities to the two trapping boundaries
-            # Te and Te stay the same though.
-            X_m, X_M = XInt(theta_T[j, 0]), XInt(theta_T[j, 1])
-            R_m, R_M = RInt(theta_T[j, 0]), RInt(theta_T[j, 1])
-            L_m, L_M = LInt(theta_T[j, 0]), LInt(theta_T[j, 1])
-            S_m, S_M = SInt(theta_T[j, 0]), SInt(theta_T[j, 1])
-
-            # Find the index of the theta value just below and just above the bounce point
-            theta_below_m = np.where(theta_T[j, 0] >  theta, True, False)
-            theta_above_M = np.where(theta_T[j, 1] <  theta, True, False)
-
-            ind_m = np.where(theta_below_m)[0][-1]
-            ind_M = np.where(theta_above_M)[0][0]
-            indices_m[j] = ind_m
-            indices_M[j] = ind_M
-
-            # Calculate the weights for the interpolation of Wfct.
-            # The only one to be done manually, as it is multidimensional
-            A_m = (theta_T[j,0] - theta[ind_m])/(theta[ind_m+1] - theta[ind_m])
-            A_M = (theta_T[j,1] - theta[ind_M-1])/(theta[ind_M] - theta[ind_M-1])
-            B_m = (theta[ind_m+1] - theta_T[j,0])/(theta[ind_m+1] - theta[ind_m])
-            B_M = (theta[ind_M] - theta_T[j,1])/(theta[ind_M] - theta[ind_M-1])
-
-            Wfct_m = A_m * Wfct[ind_m+1, :,:] + B_m * Wfct[ind_m, :,:]
-            Wfct_M = A_M * Wfct[ind_M, :,:] + B_M * Wfct[ind_M-1, :,:]
-
-            D_RF_at_trapping[:, j, 0] = D_RF_nobounce(p_norm, [ksi_val], npar, nperp, \
-                            Wfct_m, Te, \
-                            P, X_m, R_m, L_m, S_m, n, eps)[:, 0]
-            D_RF_at_trapping[:, j, 1] = D_RF_nobounce(p_norm, [ksi_val], npar, nperp, \
-                            Wfct_M, Te, \
-                            P, X_M, R_M, L_M, S_M, n, eps)[:, 0]
-        else:
-            D_RF_at_trapping[:, j] = np.nan
-            indices_m[j] = np.nan
-            indices_M[j] = np.nan
-
-    return D_RF_at_trapping, indices_m, indices_M
 
 #-------------------------------#
 #---Function for a bounce sum---#
@@ -385,7 +338,7 @@ def bounce_sum(d_theta_grid_j, CB_j, Func, passing, sigma_dep=False):
 #---THIS IS THE MAIN FUNCTION---#
 #-------------------------------#
 
-def D_RF(psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=82.7, eps=np.finfo(np.float32).eps):
+def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=82.7, eps=np.finfo(np.float32).eps):
 
     """
     The main function to calculate the RF diffusion coefficients.
@@ -393,10 +346,12 @@ def D_RF(psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=
 
         psi: np.array [l]
             The radial coordinate 
+        d_psi: np.array [l]
+            The radial coordinate spacing, needed for volume element calculation
         theta: np.array [t]
             The poloidal coordinate
         p_norm_w: np.array [i]
-            The normalised momentum grid (whole grid)
+            The normalised (to the thermal momentum) momentum grid (whole grid)
         ksi0_w: np.array [j]
             The pitch angle grid (whole grid)
         npar: np.array [length given by WKBeam binning]
@@ -430,6 +385,9 @@ def D_RF(psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=
             DRF0D_hh: np.array [l, i_h, j_h]
                 The DKE diffusion coefficient D_RF0D on the half-half grid
     """
+
+    # Timekeeping
+    tic_internal = time.time()
     #---------------------------------#
     #---Calculate the quantities needed for the calculation---#
     #---------------------------------#
@@ -443,21 +401,12 @@ def D_RF(psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=
     # Precaution to not have exactly 0 values in the grid for ksi, as this would be
     # infintely trapped particles
     # Hopefully will not be needed in final implementation, if LUKE grids are ok.
-    #ksi0_h[abs(ksi0_h)<1e-4] = 1e-4
-    #ksi0_w[abs(ksi0_w)<1e-4] = 1e-4
+    ksi0_h[abs(ksi0_h)<1e-4] = 1e-4
+    ksi0_w[abs(ksi0_w)<1e-4] = 1e-4
 
-    # widths of half grid are easy. Only defined in the proper region
-    d_p_norm_h = np.diff(p_norm_w)
-    d_ksi0_h = np.diff(ksi0_w)
-
-    # Vice versa, calculate the full grid widths. Bit more annoying, as the contributions of edge points
-    # are smaller, given that the full grid points define box edges
-    d_p_norm_w = np.concatenate(([d_p_norm_h[0]/2], np.diff(p_norm_h), [d_p_norm_h[-1]/2]))
-    d_ksi0_w = np.concatenate(([d_ksi0_h[0]/2], np.diff(ksi0_h), [d_ksi0_h[-1]/2]))
     
-    # For psi and theta. Psi is a half grid already, theta is a full grid
-    d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
-    d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
+    # For theta. Psi is a half grid already, theta is a full grid
+
     d_theta = 1/2* (np.diff(theta)[:-1] + np.diff(theta)[1:])
     d_theta = np.concatenate(([np.diff(theta)[0]/2], d_theta, [np.diff(theta)[-1]/2]))
 
@@ -876,8 +825,6 @@ def D_RF(psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], FreqGHz=
                 DRF0D_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
                 DRF0F_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
 
-
-    print(f'Core {prank} finished in {time.time() - tic} s')
     return DRF0_wh, DRF0D_wh, DRF0F_wh, DRF0_hw, DRF0D_hw, DRF0F_hw, DRF0_hh, DRF0D_hh
 
 #-------------------------------#
@@ -894,125 +841,152 @@ if __name__ == '__main__':
 
     tic = time.time()
 
-    # For now, restricted to having the a number of processes that is a divisor of the number of rho values!
+    #------------------------------#
+    #---Computation setup----------#
+    #------------------------------#
+
+    # WKBeam results, binned in appropriate dimensions
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV72644/t_1.05/Output_nofluct/L1_binned_QL.hdf5'
+
+    # Equilibrium filename
+    filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644/t_1.05/L1_raytracing.txt'
+
+    outputname = 'QL_bounce_TCV72644_nofluct.h5'
+
+    # Momentum grids
+    p_norm = np.linspace(0, 30, 100)
+    ksi = np.linspace(-1, 1, 300)
+
+    #Harmonics to take into account
+    harmonics = [2,3]
+
+    #------------------------------#
+    #---MPI implementation----------#
+    #------------------------------#
 
     comm = MPI.COMM_WORLD
-    prank = comm.Get_rank()
-    psize = comm.Get_size()
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
-    psi_size = None
-    psi_seg = None
-    Wfct_seg = None
-    WhatToResolve = None
-    mode = None
-    FreqGHz = None
-    theta = None
-    p_norm = None
-    ksi = None
-    Npar = None
-    Nperp = None
-    Eq = None
-
-    if prank == 0:
-
-        filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV72644/t_1.05/Output_fluct/L1_binned_QL.hdf5'
+    # Initialize shared data
+    if rank == 0:
+        # Initialize variables, load data, and pre-process as needed
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
 
-        # TEMPORARY NORMALISATION OF Wfct
-        Wfct /= np.amax(Wfct)
-
+        #Wfct /= np.amax(Wfct)
         psi = rho**2
 
-        filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644/t_1.05/L1_raytracing.txt'
+        # For the calculation, we'll need to have the volume element
+        # Psi is already a half-grid by definition, so we calculate dpsi as such
+        d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
+        d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
 
         idata = InputData(filename_Eq)
         Eq = TokamakEquilibrium(idata)
 
-        # Define the grid for the calculation
-        p_norm = np.linspace(0, 30, 50)
-        ksi = np.linspace(-1, 1, 100)
 
-        # Easily split the work by splitting the psi values
-        psi_size = len(psi)
-        psi_seg = np.array_split(psi, psize)
-        Wfct_seg = np.array_split(Wfct, psize, axis=0)
+        # Variables to hold results
+        DRF0_wh = np.zeros((len(psi), len(p_norm), len(ksi)-1))
+        DRF0D_wh = np.zeros((len(psi), len(p_norm), len(ksi)-1))
+        DRF0F_wh = np.zeros((len(psi), len(p_norm), len(ksi)-1))
+        DRF0_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi)))
+        DRF0D_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi)))
+        DRF0F_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi)))
+        DRF0_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi)-1))
+        DRF0D_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi)-1))
 
-    # Broadcast the shared data
+        task_queue = [(i, psi_val, d_psi[i], Wfct[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
 
+        # Sort task queue by descending psi values
+        # Higher psi values have more trapped particles, which are more expensive to calculate
+        task_queue.sort(key=lambda x: x[1], reverse=True)
+
+    else:
+        mode = None
+        FreqGHz = None
+        theta = None
+        p_norm = None
+        ksi = None
+        Npar = None
+        Nperp = None
+        Eq = None
+
+    # Broadcast shared data
     mode = comm.bcast(mode, root=0)
     FreqGHz = comm.bcast(FreqGHz, root=0)
-
     theta = comm.bcast(theta, root=0)
-
     p_norm = comm.bcast(p_norm, root=0)
     ksi = comm.bcast(ksi, root=0)
-
     Npar = comm.bcast(Npar, root=0)
     Nperp = comm.bcast(Nperp, root=0)
-    
     Eq = comm.bcast(Eq, root=0)
 
+    if rank == 0:
+        # Master process
+        num_tasks = len(task_queue)
+        num_workers = size - 1
+        task_idx = 0
+        active_workers = 0
 
-    # Scatter the data that is split
+        # Start distributing initial tasks
+        for i in range(1, min(num_workers + 1, num_tasks + 1)):
+            comm.send(task_queue[task_idx], dest=i, tag=1)
+            task_idx += 1
+            active_workers += 1
 
-    local_psi = comm.scatter(psi_seg, root=0)
-    local_Wfct = comm.scatter(Wfct_seg, root=0) 
+        while task_idx < num_tasks or active_workers > 0:
+            # Receive results
+            result = comm.recv(source=MPI.ANY_SOURCE, tag=2)
+            worker_id, idx, result_data = result
+            active_workers -= 1
 
-    # Perform local calculation
+            # Update results arrays with the data from worker
+            DRF0_wh[idx], DRF0D_wh[idx], DRF0F_wh[idx], DRF0_hw[idx], \
+            DRF0D_hw[idx], DRF0F_hw[idx], DRF0_hh[idx], DRF0D_hh[idx] = result_data
 
-    DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
+            #Print progress
+            print(f'\rProgress: {task_idx}/{num_tasks}', end='', flush=True)
+
+            if task_idx < num_tasks:
+                # Send new task to this worker
+                comm.send(task_queue[task_idx], dest=worker_id, tag=1)
+                task_idx += 1
+                active_workers += 1
+
+        # Send termination signal
+        for i in range(1, size):
+            comm.send(None, dest=i, tag=0)
+
+    else:
+        # Worker process
+        while True:
+            task = comm.recv(source=0, tag=MPI.ANY_TAG)
+            if task is None:
+                break
+
+            idx, psi_value, d_psi_value, Wfct_slice = task
+
+            #Expand dimension of Wfct to have len=1 in the first dimension
+            Wfct_slice = np.expand_dims(Wfct_slice, axis=0)
+
+            # Perform the calculation
+            DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
             DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc = \
-            D_RF(local_psi, theta, p_norm, ksi, Npar, Nperp, local_Wfct, Eq, n=[2], FreqGHz=FreqGHz)
-    
-    # Gather the data
+            D_RF([psi_value], [d_psi_value], theta, p_norm, ksi, Npar, Nperp, Wfct_slice, Eq, n=harmonics, FreqGHz=FreqGHz)
 
-    local_sizes = comm.gather(len(local_psi), root=0)
+            result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
+                        DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0])
 
-    DRF0_wh = None
-    DRF0D_wh = None
-    DRF0F_wh = None
-    DRF0_hw = None
-    DRF0D_hw = None
-    DRF0F_hw = None
-    DRF0_hh = None
-    DRF0D_hh = None
-
-    R, Z = None, None
-
-    if prank == 0:
-        DRF0_wh = np.zeros((psi_size, len(p_norm), len(ksi)-1))
-        DRF0D_wh = np.zeros((psi_size, len(p_norm), len(ksi)-1))
-        DRF0F_wh = np.zeros((psi_size, len(p_norm), len(ksi)-1))
-
-        DRF0_hw = np.zeros((psi_size, len(p_norm)-1, len(ksi)))
-        DRF0D_hw = np.zeros((psi_size, len(p_norm)-1, len(ksi)))
-        DRF0F_hw = np.zeros((psi_size, len(p_norm)-1, len(ksi)))
-
-        DRF0_hh = np.zeros((psi_size, len(p_norm)-1, len(ksi)-1))
-        DRF0D_hh = np.zeros((psi_size, len(p_norm)-1, len(ksi)-1))
-
-        R, Z = np.zeros((psi_size, len(theta))), np.zeros((psi_size, len(theta)))
-
-    comm.Gather(DRF0_wh_loc, DRF0_wh, root=0)
-    comm.Gather(DRF0D_wh_loc, DRF0D_wh, root=0)
-    comm.Gather(DRF0F_wh_loc, DRF0F_wh, root=0)
-    comm.Gather(DRF0_hw_loc, DRF0_hw, root=0)
-    comm.Gather(DRF0D_hw_loc, DRF0D_hw, root=0)
-    comm.Gather(DRF0F_hw_loc, DRF0F_hw, root=0)
-    comm.Gather(DRF0_hh_loc, DRF0_hh, root=0)
-    comm.Gather(DRF0D_hh_loc, DRF0D_hh, root=0)
+            # Send result back to master
+            comm.send((rank, idx, result_data), dest=0, tag=2)
 
 
-    # Git testing.
-    # Git testing 2.
-    # Git testing 3.1
-
-    if prank == 0:
+    if rank == 0:
         toc = time.time()
-        print(f'Time taken: {toc-tic:.2f} s')
+        print(f'\rTime taken: {toc-tic:.2f} s')
 
         # Save the data
-        with h5py.File('QL_bounce_TCV72644_fluct.h5', 'w') as file:
+        with h5py.File(outputname, 'w') as file:
             file.create_dataset('psi', data=psi)
             file.create_dataset('theta', data=theta)
             file.create_dataset('ksi', data=ksi)

@@ -1,3 +1,7 @@
+import sys
+import os
+import time
+
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
@@ -190,7 +194,7 @@ def N_par_resonant(inv_kp, p_Te, Gamma, X, harm):
     Calculate the resonant n_par. p_norm and Gamma are of shape (n_p), StixY is a scalar.
     Returns an array of the same shape as p_norm
     """
-    return (Gamma - harm*X)/p_Te *inv_kp
+    return -(Gamma - harm*X)/p_Te *inv_kp
 
 #@jit(nopython=True)
 def polarisation(N2, K_angle, P, R, L, S):
@@ -274,11 +278,11 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
         # This is done for every point in the grid. If it is not within dNpar/2 of any value in Npar, the index is set to -1.
         # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
 
-        dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*10) #/2
+        dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*2) #/2
         res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
         
         res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
- 
+
         i_res = np.where(res_mask_Pspace)[0]
         # The array i_res contains the indices of the resonant values in the p_norm grid for this psi, ksi pair.
 
@@ -851,14 +855,14 @@ if __name__ == '__main__':
     # Equilibrium filename
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644/t_1.05/L1_raytracing.txt'
 
-    outputname = 'QL_bounce_TCV72644_nofluct.h5'
+    outputname = 'QL_bounce_TCV72644_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 30, 100)
-    ksi = np.linspace(-1, 1, 300)
+    p_norm = np.linspace(0, 15, 50)
+    ksi = np.linspace(-1, 1, 50)
 
     #Harmonics to take into account
-    harmonics = [2,3]
+    harmonics = [2]
 
     #------------------------------#
     #---MPI implementation----------#

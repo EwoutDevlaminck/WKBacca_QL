@@ -858,11 +858,11 @@ if __name__ == '__main__':
     outputname = 'QL_bounce_TCV72644_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 50)
-    ksi = np.linspace(-1, 1, 50)
+    p_norm = np.linspace(0, 15, 100)
+    ksi = np.linspace(-1, 1, 300)
 
     #Harmonics to take into account
-    harmonics = [2]
+    harmonics = [2, 3]
 
     #------------------------------#
     #---MPI implementation----------#
@@ -876,7 +876,7 @@ if __name__ == '__main__':
     if rank == 0:
         # Initialize variables, load data, and pre-process as needed
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
-
+        
         #Wfct /= np.amax(Wfct)
         psi = rho**2
 

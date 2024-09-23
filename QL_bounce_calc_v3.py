@@ -858,11 +858,11 @@ if __name__ == '__main__':
     outputname = 'QL_bounce_TCV72644_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 100)
+    p_norm = np.linspace(0, 15, 200)
     ksi = np.linspace(-1, 1, 300)
 
     #Harmonics to take into account
-    harmonics = [2, 3]
+    harmonics = [2]
 
     #------------------------------#
     #---MPI implementation----------#

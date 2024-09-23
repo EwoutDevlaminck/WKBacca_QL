@@ -135,10 +135,12 @@ def config_quantities(psi, theta, omega, Eq):
 def minmaxB(BInt_at_psi, theta):
 
     minusB_at_psi = -BInt_at_psi(theta)
-    minusB_at_psiInt = interp1d(theta, minusB_at_psi, kind='cubic')
+    # Artificial shift to avoid problems of minimization
+    minusB_at_psi_shift = np.concatenate((minusB_at_psi[len(theta)//2:], minusB_at_psi[:len(theta)//2]))
+    minusB_at_psiInt = interp1d(theta, minusB_at_psi_shift, kind='cubic')
 
     minimum = minimize(BInt_at_psi, 0.)
-    maximum = minimize(minusB_at_psiInt, -3)
+    maximum = minimize(minusB_at_psiInt, 0.)
 
     # Return the minimum and maximum
 
@@ -254,6 +256,7 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
 
     npar_tree = KDTree(npar.reshape(-1, 1))
     d_npar = npar[1] - npar[0] # Assume a constant grid for now
+    d_nperp = nperp[1] - nperp[0] # Assume a constant grid for now
     
 
     # Precalculate the inverse ksi*p_norm grid, with a small offset to avoid division by zero
@@ -320,7 +323,7 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
                                         pol[2] * bessel_integrand(harm, a_perp)
                     
                     # Now we can calculate the integrand for this point in the grid
-                    D_RF_integrand[i] += prefac * nperp[i_nperp] * Pol_term * Wfct[i_npar, i_nperp]
+                    D_RF_integrand[i] += d_nperp * prefac * nperp[i_nperp] * Pol_term * Wfct[i_npar, i_nperp]
 
     return D_RF_integrand
 
@@ -858,11 +861,13 @@ if __name__ == '__main__':
     outputname = 'QL_bounce_TCV72644_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 200)
-    ksi = np.linspace(-1, 1, 300)
+    p_norm = np.linspace(0, 15, 10)
+    ksi = np.linspace(-1, 1, 30)
 
     #Harmonics to take into account
     harmonics = [2]
+
+    plot_option = 1
 
     #------------------------------#
     #---MPI implementation----------#
@@ -876,7 +881,7 @@ if __name__ == '__main__':
     if rank == 0:
         # Initialize variables, load data, and pre-process as needed
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
-        
+
         #Wfct /= np.amax(Wfct)
         psi = rho**2
 
@@ -1006,21 +1011,23 @@ if __name__ == '__main__':
             file.create_dataset('DRF0_hh', data=DRF0_hh)
             file.create_dataset('DRF0D_hh', data=DRF0D_hh)
 
-        Pw, Kh = np.meshgrid(p_norm, ksi[:-1])
+        if plot_option:
+            Pw, Kh = np.meshgrid(p_norm, ksi[:-1])
 
-        PP, PPer = Pw * Kh, Pw * np.sqrt(1 - Kh**2)
+            PP, PPer = Pw * Kh, Pw * np.sqrt(1 - Kh**2)
 
-        fig, axs = plt.subplots(5, 3, figsize=(12, 18))
+            fig, axs = plt.subplots(5, 3, figsize=(18, 12))
 
-        for i, ax in enumerate(axs.flatten()):
-            ax.pcolormesh(PP, PPer, DRF0_wh[2*i].T, cmap='plasma')
-            #ax.contourf(p_norm, ksi[:-1], DRF0_wh[2*i].T, levels=50, cmap='plasma')
-            ax.set_title(f'psi = {rho[2*i]**2:.2f}')
-            ax.set_xlabel(r'$p\{\|}$')
-            ax.set_ylabel(r'$p_{\perp}$')
-            #ax.set_aspect('equal')
+            maxDrf = np.amax(DRF0_wh)
 
-        plt.show()
+            for i, ax in enumerate(axs.flatten()):
+                ax.pcolormesh(PP, PPer, DRF0_wh[2*i].T, cmap='plasma', vmax=maxDrf)
+                ax.set_title(f'psi = {rho[2*i]**2:.2f}')
+                ax.set_xlabel(r'$p\{||}$')
+                ax.set_ylabel(r'$p_{\perp}$')
+                ax.set_aspect('equal')
+            plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, DRF0_wh[0].T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')
+            plt.show()
 
 
     sys.exit(0)

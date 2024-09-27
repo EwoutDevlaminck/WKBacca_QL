@@ -283,7 +283,7 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
         # This is done for every point in the grid. If it is not within dNpar/2 of any value in Npar, the index is set to -1.
         # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
 
-        dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar/2) #/2
+        dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*2) #/2
         res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
         
         res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
@@ -420,8 +420,10 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
     d_theta = np.concatenate(([np.diff(theta)[0]/2], d_theta, [np.diff(theta)[-1]/2]))
 
     # Precalculate quantities in configuration space
+    # Careful, these are only to be used for passign particles, that keep the full theta grid!
     Rp, Zp = Eq.magn_axis_coord_Rz
     ptR, ptZ, ptBt, ptBR, ptBz, ptB, ptNe, ptTe, P, X, R, L, S = config_quantities(psi, theta, omega, Eq)
+
 
     #--------------------------------#
     #---Initialision of grids---#
@@ -492,11 +494,11 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
         # This part is usually turned off, but can show the resonance condition in phase space for given psi, theta
 
-        show_resonance = False
+        show_resonance = True
 
         if show_resonance:
-            for t in range(0, len(theta), 5):
-                if Edens[t].max() > 0:
+            for t in range(0, len(theta), 3):
+                if Edens[t].max() > 0 and psi_l > 0.7:
                     # Precalculate the inverse ksi*p_norm grid, with a small offset to avoid division by zero
                     Ksi, P_norm = np.meshgrid(ksi0_h, p_norm_w)
                     P_par, P_perp = P_norm * Ksi, P_norm * np.sqrt(1 - Ksi**2)
@@ -514,7 +516,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
                     npar_tree = KDTree(npar.reshape(-1, 1))
 
-                    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar/2) #/2
+                    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*4) #/2
                     res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
                     
                     res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
@@ -532,6 +534,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     plt.xlabel('P_par')
                     plt.ylabel('P_perp')
                     plt.title(f'Npar required for resonance at rho = {np.sqrt(psi_l):.2f}, theta = {theta[t]:.2f}')
+                    plt.savefig(f'/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV74302/Figures/Npar_resonance_{psi_l:.2f}_{theta[t]:.2f}.png')
             plt.show()
 
         #--------------------------------#
@@ -546,7 +549,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
             if abs(ksi0_val) > Trapksi0_h[l]:
                 # Passing!
                 # Then it is rather easy, all theta values are accessible
-                passing = True
+                passing = True           
 
                 theta_grid_j_h = theta
                 d_theta_grid_j_h = d_theta
@@ -631,6 +634,36 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                 DRF0_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
                 DRF0D_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
 
+                if np.amax(DRF0_wh[l, :, j]) > 1e-1:
+                    index_i = np.argmax(DRF0_wh[l, :, j])
+                    #print(f'DRF0 = {DRF0_wh[l, :, j]}\n')
+                    plt.figure(figsize=(10, 10))
+                    ax = plt.subplot(221)
+                    ax.plot(p_norm_w, DRF0_wh[l, :, j], label='DRF0')
+                    ax.set_xlabel('p_norm')
+                    ax.set_yscale('log')
+                    ax.legend()
+                    ax2 = plt.subplot(222)
+                    ax2.plot(p_norm_w, C_RF_wh[:, j] / lambda_q_h[l, j], label='C_RF/lambda_q')
+                    ax2.set_yscale('log')
+                    ax2.set_xlabel('p_norm')
+                    ax2.legend()
+                    ax3 = plt.subplot(223)
+                    ax3.plot(theta_grid_j_h, DRF0_integrand, label='DRF0_integrand')
+                    ax3.set_xlabel('theta')
+                    ax3.set_yscale('log')
+                    ax3.legend()
+                    ax4 = plt.subplot(224)
+                    #ax4.plot(theta_grid_j_h, D_rf_lj_wh[:, index_i], label='D_rf_nobounce')
+                    #ax4.set_xlabel('theta')
+                    #ax4.set_yscale('log')
+                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh.T, levels=50, label='D_rf_nobounce')
+                    plt.colorbar(Drf_nob)
+                    ax4.set_ylabel('p_norm')
+                    ax4.set_xlabel('theta')
+                    plt.title(f'rho = {np.sqrt(psi_l):.2f}, ksi0 = {ksi0_val:.2f}')
+                    plt.show()
+
             else:
                 # Trapped!
                 passing = False
@@ -661,6 +694,10 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                 Bz_at_psi_j_h         = interp1d(theta, ptBz[l, :])(theta_grid_j_h)
                 R_axis_at_psi_j_h     = interp1d(theta, ptR[l, :])(theta_grid_j_h) - Rp
                 Z_axis_at_psi_j_h     = interp1d(theta, ptZ[l, :])(theta_grid_j_h) - Zp
+
+                # Get configuration quantities on the newly defined theta grid
+                # Only the ones that depend on theta
+                _, _, _, _, _, _, _, _, _, X_h, R_h, L_h, S_h = config_quantities([psi_l], theta_grid_j_h, omega, Eq)
 
                 # Calculate the internal factor of the bounce integral [t]
                 CB_j_h = B_at_psi_j_h * (R_axis_at_psi_j_h**2 + Z_axis_at_psi_j_h**2)\
@@ -707,12 +744,12 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     D_rf_lj_wh[t, :] = \
                         D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
                               Edens_interp_lj_h[t, :, :], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
+                                P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], n, eps).T
 
                     D_rf_lj_hh[t, :] = \
                         D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                               Edens_interp_lj_h[t, :, :], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
+                                P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], n, eps).T
                     
                 # With the calculated values for all [t] at given psi, ksi_O,
                 # we can now calculate the bounce integrals
@@ -736,14 +773,37 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 DRF0_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
                 DRF0D_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
-                """
-                if np.amax(DRF0_wh[l, :, j]) > 1e-6:
+                
+                if np.amax(DRF0_wh[l, :, j]) > 1e-3:
                     index_i = np.argmax(DRF0_wh[l, :, j])
-                    print(f'DRF0 = {DRF0_wh[l, :, j]}\n')
-                    print(f'psi = {psi_l:.2f}, ksi0 = {ksi0_val:.2f} Trapped\n')
-                    print(DRF0_wh[l, :, j]/(C_RF_wh[:, j] * lambda_q_h[l, j]))
-                    print(D_rf_lj_wh)
-                """
+                    #print(f'DRF0 = {DRF0_wh[l, :, j]}\n')
+                    plt.figure(figsize=(10, 10))
+                    ax = plt.subplot(221)
+                    ax.plot(p_norm_w, DRF0_wh[l, :, j], label='DRF0')
+                    ax.set_xlabel('p_norm')
+                    ax.set_yscale('log')
+                    ax.legend()
+                    ax2 = plt.subplot(222)
+                    ax2.plot(p_norm_w, C_RF_wh[:, j] / lambda_q_h[l, j], label='C_RF/lambda_q')
+                    ax2.set_yscale('log')
+                    ax2.set_xlabel('p_norm')
+                    ax2.legend()
+                    ax3 = plt.subplot(223)
+                    ax3.plot(theta_grid_j_h, DRF0_integrand, label='DRF0_integrand')
+                    ax3.set_xlabel('theta')
+                    ax3.set_yscale('log')
+                    ax3.legend()
+                    ax4 = plt.subplot(224)
+                    #ax4.plot(theta_grid_j_h, D_rf_lj_wh[:, index_i], label='D_rf_nobounce')
+                    #ax4.set_xlabel('theta')
+                    #ax4.set_yscale('log')
+                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh.T, levels=50, label='D_rf_nobounce')
+                    plt.colorbar(Drf_nob)
+                    ax4.set_ylabel('p_norm')
+                    ax4.set_xlabel('theta')
+                    plt.title(f'rho = {np.sqrt(psi_l):.2f}, ksi0 = {ksi0_val:.2f}')
+                    plt.show()
+                
         #--------------------------------#
         #---ksi0 whole grid calculation--#
         #--------------------------------#
@@ -830,7 +890,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
             else:
                 # Trapped!
                 passing = False
-
+                
                 # In this case, we have to shift to a different theta grid
 
                 # The theta roots are the boundaries of the region where the particles are trapped
@@ -857,6 +917,11 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                 Bz_at_psi_j_w         = interp1d(theta, ptBz[l, :])(theta_grid_j_w)
                 R_axis_at_psi_j_w     = interp1d(theta, ptR[l, :])(theta_grid_j_w) - Rp
                 Z_axis_at_psi_j_w     = interp1d(theta, ptZ[l, :])(theta_grid_j_w) - Zp
+
+                # Get configuration quantities on the newly defined theta grid
+                # Only the ones that depend on theta
+                _, _, _, _, _, _, _, _, _, X_w, R_w, L_w, S_w = config_quantities([psi_l], theta_grid_j_w, omega, Eq)
+
 
                 # Calculate the internal factor of the bounce integral [t]
                 CB_j_w = B_at_psi_j_w * (R_axis_at_psi_j_w**2 + Z_axis_at_psi_j_w**2)\
@@ -901,7 +966,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     D_rf_lj_hw[t, :] = \
                         D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                               Edens_interp_lj_w[t, :, :], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
+                                P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], n, eps).T
                     
                 # With the calculated values for all [t] at given psi, ksi_O,
                 # we can now calculate the bounce integrals
@@ -946,21 +1011,21 @@ if __name__ == '__main__':
     #------------------------------#
 
     # WKBeam results, binned in appropriate dimensions
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/output/L1_binned_QL_test.hdf5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
 
     # Equilibrium filename
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 
-    outputname = 'QL_bounce_TCV72644_test.h5'
+    outputname = 'QL_bounce_TCV74302_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 150)
-    ksi0 = np.linspace(-1, 1, 300)
+    p_norm = np.linspace(0, 15, 50)
+    ksi0 = np.linspace(-1, 1, 150)
 
     #Harmonics to take into account
     harmonics = [2]
 
-    plot_option = 0
+    plot_option = 1
 
     #------------------------------#
     #---MPI implementation----------#
@@ -976,13 +1041,14 @@ if __name__ == '__main__':
         WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
 
 
+
         psi = rho**2
 
         # For the calculation, we'll need to have the volume element
         # Psi is already a half-grid by definition, so we calculate dpsi as such
         d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
         d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
-        #d_psi = [0.012]
+        #d_psi = [0.37**2-0.35**2]
 
         idata = InputData(filename_Eq)
         Eq = TokamakEquilibrium(idata)

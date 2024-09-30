@@ -250,7 +250,7 @@ def D_RF_prefactor(p_norm, ksi0, Ne, Te, omega, eps):
 #---Function for the calculation of D_RF(psi, theta, p, ksi)---#
 #----------------------------
 
-def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plot=False):
+def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, harm, eps, plot=False):
         
     # The subfunction, that for a given psi_l and ksi, calculates the 
     # contribution to D_RF for a given momentum grid [i].
@@ -272,60 +272,59 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, n, eps, plo
     D_RF_integrand = np.zeros_like(p_norm)
 
 
-    for harm in n:
-        # resonance_N_par gives a 1D array of the resonant Npar values [i]
-        # This whole calculation is done dimensionless now. 
+    # resonance_N_par gives a 1D array of the resonant Npar values [i]
+    # This whole calculation is done dimensionless now. 
 
-        resonance_N_par = N_par_resonant(inv_kp, p_Te, Gamma, X, harm)
+    resonance_N_par = N_par_resonant(inv_kp, p_Te, Gamma, X, harm)
 
-        # We can now query the KDTree to get the indices of the resonant values in Npar.
-        # The code below efficiently looks for the index of the value in Npar that is closest to the resonant value.
-        # This is done for every point in the grid. If it is not within dNpar/2 of any value in Npar, the index is set to -1.
-        # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
+    # We can now query the KDTree to get the indices of the resonant values in Npar.
+    # The code below efficiently looks for the index of the value in Npar that is closest to the resonant value.
+    # This is done for every point in the grid. If it is not within dNpar/2 of any value in Npar, the index is set to -1.
+    # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
 
-        dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*2) #/2
-        res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
+    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*2) #/2
+    res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
+    
+    res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
+
+    i_res = np.where(res_mask_Pspace)[0]
+    # The array i_res contains the indices of the resonant values in the p_norm grid for this psi, ksi pair.
+
+    # We can now use the mask to select the resonant values in p_norm and calculate the integrand. 
+    # Where there is no Npar value resonant, we can skip the calculation.
+    
+    for i in i_res:
+
+        i_npar = res_condition_N_par[i]
+        # At this point, we check |E|² to see if at Npar[i_npar] (for this p), the beam is present.
+        # And if so, for what value of Nperp.
+
+        #TEST Gaussian prefactor based on the resonance condition
+        prefac = 1 # np.exp(-dist_N_par[i]**2/(2*d_npar**2))
+        mask_beam_present = Wfct[i_npar, :] > 0 
+        indeces_Nperp_beam_present = np.where(mask_beam_present)[0]
         
-        res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
 
-        i_res = np.where(res_mask_Pspace)[0]
-        # The array i_res contains the indices of the resonant values in the p_norm grid for this psi, ksi pair.
+        if np.any(mask_beam_present):
+            # Calculate the polarisation for the cells where the beam is present
+            # Now that we've pruned all the data so heavily, finally we can calculate the polarisation for the beam cells.
+            for i_nperp in indeces_Nperp_beam_present:
+                # Calculate local quantities
+                N2 = nperp[i_nperp]**2 + npar[i_npar]**2
+                K_angle = np.arctan2(npar[i_npar], nperp[i_nperp])
+                pol = polarisation(N2, K_angle, P, R, L, S)
 
-        # We can now use the mask to select the resonant values in p_norm and calculate the integrand. 
-        # Where there is no Npar value resonant, we can skip the calculation.
-        
-        for i in i_res:
+                a_perp = A_perp(nperp[i_nperp], p_norm[i], p_Te, ksi, X)
 
-            i_npar = res_condition_N_par[i]
-            # At this point, we check |E|² to see if at Npar[i_npar] (for this p), the beam is present.
-            # And if so, for what value of Nperp.
-
-            #TEST Gaussian prefactor based on the resonance condition
-            prefac = 1 # np.exp(-dist_N_par[i]**2/(2*d_npar**2))
-            mask_beam_present = Wfct[i_npar, :] > 0 
-            indeces_Nperp_beam_present = np.where(mask_beam_present)[0]
-            
-
-            if np.any(mask_beam_present):
-                # Calculate the polarisation for the cells where the beam is present
-                # Now that we've pruned all the data so heavily, finally we can calculate the polarisation for the beam cells.
-                for i_nperp in indeces_Nperp_beam_present:
-                    # Calculate local quantities
-                    N2 = nperp[i_nperp]**2 + npar[i_npar]**2
-                    K_angle = np.arctan2(npar[i_npar], nperp[i_nperp])
-                    pol = polarisation(N2, K_angle, P, R, L, S)
-
-                    a_perp = A_perp(nperp[i_nperp], p_norm[i], p_Te, ksi, X)
-
-                    #Take the bessel functions...
-                    #And combine to get polarisation term
-                    
-                    Pol_term = .5* (pol[0] * bessel_integrand(harm-1, a_perp) + \
-                                    pol[1] * bessel_integrand(harm+1, a_perp) )+ \
-                                        pol[2] * bessel_integrand(harm, a_perp)
-                    
-                    # Now we can calculate the integrand for this point in the grid
-                    D_RF_integrand[i] += d_nperp * prefac * nperp[i_nperp] * Pol_term * Wfct[i_npar, i_nperp]
+                #Take the bessel functions...
+                #And combine to get polarisation term
+                
+                Pol_term = .5* (pol[0] * bessel_integrand(harm-1, a_perp) + \
+                                pol[1] * bessel_integrand(harm+1, a_perp) )+ \
+                                    pol[2] * bessel_integrand(harm, a_perp)
+                
+                # Now we can calculate the integrand for this point in the grid
+                D_RF_integrand[i] += d_nperp * prefac * nperp[i_nperp] * Pol_term * Wfct[i_npar, i_nperp]
 
     return D_RF_integrand
 
@@ -439,16 +438,16 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
     lambda_q_h = np.zeros((len(psi), len(ksi0_h)))
     lambda_q_w = np.zeros((len(psi), len(ksi0_w)))
                           
-    DRF0_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h)))
-    DRF0D_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h)))
-    DRF0F_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h)))
+    DRF0_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(n)))
+    DRF0D_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(n)))
+    DRF0F_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(n)))
 
-    DRF0_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w)))
-    DRF0D_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w)))
-    DRF0F_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w)))
+    DRF0_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(n)))
+    DRF0D_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(n)))
+    DRF0F_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(n)))
 
-    DRF0_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h)))
-    DRF0D_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h)))
+    DRF0_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h), len(n)))
+    DRF0D_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h), len(n)))
 
     #--------------------------------#
     # ---Calculation split into the psi grid---#
@@ -594,52 +593,53 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_wh = np.zeros((len(theta), len(p_norm_w)))
-                D_rf_lj_hh = np.zeros((len(theta), len(p_norm_h)))
+                D_rf_lj_wh = np.zeros((len(theta), len(p_norm_w), len(n)))
+                D_rf_lj_hh = np.zeros((len(theta), len(p_norm_h), len(n)))
 
                 # Divide by the volume element to get the electric field energy density in J/m^3
                 Edens_lj_h = Edens[:, :, :]/ptV_h[:, None, None]
 
-
-                for t, theta_val in enumerate(theta_grid_j_h):
-                    D_rf_lj_wh[t, :] = \
-                        D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                              Edens_lj_h[t, :,:], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
-                    
-                    D_rf_lj_hh[t, :] = \
-                        D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                              Edens_lj_h[t, :,:], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
+                for n_idx, harm in enumerate(n):
+                    # Split over the harmonics here because it will be important for the final quantities
+                    for t, theta_val in enumerate(theta_grid_j_h):
+                        D_rf_lj_wh[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
+                                Edens_lj_h[t, :,:], ptTe[l, t], \
+                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                        
+                        D_rf_lj_hh[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                Edens_lj_h[t, :,:], ptTe[l, t], \
+                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
             
-                # With the calculated values for all [t] at given psi, ksi_O,
-                # we can now calculate the bounce integrals
-                # As D_rf_lj is [t, i], we need to loop over the momentum values
-                # to calculate the bounce integral for each i
-                for i, _ in enumerate(p_norm_w):
+                    # With the calculated values for all [t] at given psi, ksi_O,
+                    # we can now calculate the bounce integrals
+                    # As D_rf_lj is [t, i], we need to loop over the momentum values
+                    # to calculate the bounce integral for each i
+                    for i, _ in enumerate(p_norm_w):
 
-                    DRF0_wh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i] , passing, False)
-                    DRF0D_wh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_wh[:, i] , passing, True)
-                    DRF0F_wh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0F_integrand*D_rf_lj_wh[:, i] , passing, True)
+                        DRF0_wh[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i, n_idx] , passing, False)
+                        DRF0D_wh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_wh[:, i, n_idx] , passing, True)
+                        DRF0F_wh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0F_integrand*D_rf_lj_wh[:, i, n_idx] , passing, True)
 
-                for i, _ in enumerate(p_norm_h):
-                    DRF0_hh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_hh[:, i] , passing, False)
-                    DRF0D_hh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_hh[:, i] , passing, True)
+                    for i, _ in enumerate(p_norm_h):
+                        DRF0_hh[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_hh[:, i, n_idx] , passing, False)
+                        DRF0D_hh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_hh[:, i, n_idx] , passing, True)
 
-                # Finish off by adding the prefactor and the lambda*q factor
-                DRF0_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
-                DRF0D_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
-                DRF0F_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
+                    # Finish off by adding the prefactor and the lambda*q factor
+                    DRF0_wh[l, :, j, n_idx] *= C_RF_wh[:, j] / lambda_q_h[l, j] 
+                    DRF0D_wh[l, :, j, n_idx] *= C_RF_wh[:, j]  / lambda_q_h[l, j]
+                    DRF0F_wh[l, :, j, n_idx] *= C_RF_wh[:, j]  / lambda_q_h[l, j]
 
-                DRF0_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
-                DRF0D_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
+                    DRF0_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j] 
+                    DRF0D_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
 
-                if np.amax(DRF0_wh[l, :, j]) > 1e-1:
-                    index_i = np.argmax(DRF0_wh[l, :, j])
+                if np.amax(DRF0_wh[l, :, j]) > 1e3:
+                    index_i, index_n = np.argmax(DRF0_wh[l, :, j])
                     #print(f'DRF0 = {DRF0_wh[l, :, j]}\n')
                     plt.figure(figsize=(10, 10))
                     ax = plt.subplot(221)
-                    ax.plot(p_norm_w, DRF0_wh[l, :, j], label='DRF0')
+                    ax.plot(p_norm_w, DRF0_wh[l, :, j, index_n], label='DRF0')
                     ax.set_xlabel('p_norm')
                     ax.set_yscale('log')
                     ax.legend()
@@ -657,7 +657,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     #ax4.plot(theta_grid_j_h, D_rf_lj_wh[:, index_i], label='D_rf_nobounce')
                     #ax4.set_xlabel('theta')
                     #ax4.set_yscale('log')
-                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh.T, levels=50, label='D_rf_nobounce')
+                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh[:, :, index_n].T, levels=50, label='D_rf_nobounce')
                     plt.colorbar(Drf_nob)
                     ax4.set_ylabel('p_norm')
                     ax4.set_xlabel('theta')
@@ -728,8 +728,8 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_wh = np.zeros((len(theta_grid_j_h), len(p_norm_w)))
-                D_rf_lj_hh = np.zeros((len(theta_grid_j_h), len(p_norm_h)))
+                D_rf_lj_wh = np.zeros((len(theta_grid_j_h), len(p_norm_w), len(n)))
+                D_rf_lj_hh = np.zeros((len(theta_grid_j_h), len(p_norm_h), len(n)))
 
                 # Interpolate the Wfct to the new theta grid
                 # We need to meshgrid the theta and npar, nperp grids
@@ -738,48 +738,49 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 Edens_interp_lj_h = Edens_interp_lj_h[:, :, :]/ptV_h[:, None, None]
 
+                for n_idx, harm in enumerate(n):
+                    # Split over the harmonics here because it will be important for the final quantities
+                    for t, theta_val in enumerate(theta_grid_j_h):
 
-                for t, theta_val in enumerate(theta_grid_j_h):
+                        D_rf_lj_wh[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
+                                Edens_interp_lj_h[t, :, :], ptTe[l, t], \
+                                    P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
 
-                    D_rf_lj_wh[t, :] = \
-                        D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                              Edens_interp_lj_h[t, :, :], ptTe[l, t], \
-                                P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], n, eps).T
+                        D_rf_lj_hh[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                Edens_interp_lj_h[t, :, :], ptTe[l, t], \
+                                    P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                        
+                    # With the calculated values for all [t] at given psi, ksi_O,
+                    # we can now calculate the bounce integrals
+                    # As D_rf_lj is [t, i], we need to loop over the momentum values
 
-                    D_rf_lj_hh[t, :] = \
-                        D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                              Edens_interp_lj_h[t, :, :], ptTe[l, t], \
-                                P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], n, eps).T
-                    
-                # With the calculated values for all [t] at given psi, ksi_O,
-                # we can now calculate the bounce integrals
-                # As D_rf_lj is [t, i], we need to loop over the momentum values
+                    for i, _ in enumerate(p_norm_w):
 
-                for i, _ in enumerate(p_norm_w):
+                        DRF0_wh[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i, n_idx] , passing, False)
+                        DRF0D_wh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_wh[:, i, n_idx] , passing, True)
+                        DRF0F_wh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0F_integrand*D_rf_lj_wh[:, i, n_idx] , passing, True)
 
-                    DRF0_wh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i] , passing, False)
-                    DRF0D_wh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_wh[:, i] , passing, True)
-                    DRF0F_wh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0F_integrand*D_rf_lj_wh[:, i] , passing, True)
+                    for i, _ in enumerate(p_norm_h):
 
-                for i, _ in enumerate(p_norm_h):
+                        DRF0_hh[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_hh[:, i, n_idx] , passing, False)
+                        DRF0D_hh[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_hh[:, i, n_idx] , passing, True)
 
-                    DRF0_hh[l, i, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_hh[:, i] , passing, False)
-                    DRF0D_hh[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0D_integrand*D_rf_lj_hh[:, i] , passing, True)
+                    # Finish off by adding the prefactor and the lambda*q factor
+                    DRF0_wh[l, :, j, n_idx] *= C_RF_wh[:, j] / lambda_q_h[l, j]
+                    DRF0D_wh[l, :, j, n_idx] *= C_RF_wh[:, j] / lambda_q_h[l, j]
+                    DRF0F_wh[l, :, j, n_idx] *= C_RF_wh[:, j] / lambda_q_h[l, j]
 
-                # Finish off by adding the prefactor and the lambda*q factor
-                DRF0_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
-                DRF0D_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
-                DRF0F_wh[l, :, j] *= C_RF_wh[:, j] / lambda_q_h[l, j]
-
-                DRF0_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
-                DRF0D_hh[l, :, j] *= C_RF_hh[:, j] / lambda_q_h[l, j]
+                    DRF0_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
+                    DRF0D_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
                 
-                if np.amax(DRF0_wh[l, :, j]) > 1e-3:
-                    index_i = np.argmax(DRF0_wh[l, :, j])
+                if np.amax(DRF0_wh[l, :, j]) > 1e3:
+                    index_i, index_n = np.argmax(DRF0_wh[l, :, j])
                     #print(f'DRF0 = {DRF0_wh[l, :, j]}\n')
                     plt.figure(figsize=(10, 10))
                     ax = plt.subplot(221)
-                    ax.plot(p_norm_w, DRF0_wh[l, :, j], label='DRF0')
+                    ax.plot(p_norm_w, DRF0_wh[l, :, j, n_idx], label='DRF0')
                     ax.set_xlabel('p_norm')
                     ax.set_yscale('log')
                     ax.legend()
@@ -797,7 +798,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
                     #ax4.plot(theta_grid_j_h, D_rf_lj_wh[:, index_i], label='D_rf_nobounce')
                     #ax4.set_xlabel('theta')
                     #ax4.set_yscale('log')
-                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh.T, levels=50, label='D_rf_nobounce')
+                    Drf_nob = ax4.contourf(theta_grid_j_h, p_norm_w, D_rf_lj_wh[:,:, n_idx].T, levels=50, label='D_rf_nobounce')
                     plt.colorbar(Drf_nob)
                     ax4.set_ylabel('p_norm')
                     ax4.set_xlabel('theta')
@@ -854,37 +855,32 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_hw = np.zeros((len(theta), len(p_norm_h)))
+                D_rf_lj_hw = np.zeros((len(theta), len(p_norm_h), len(n)))
 
                 Edens_lj_w = Edens[:, :, :]/ptV_w[:, None, None]
 
-                for t, theta_val in enumerate(theta_grid_j_w):
-                    D_rf_lj_hw[t, :] = \
-                        D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                              Edens_lj_w[t,:,:], ptTe[l, t], \
-                                P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], n, eps).T
-                """    
-                if np.amax(D_rf_lj_hw) > 1e-4:
-                    plt.contourf(p_norm_h,theta_grid_j_w, D_rf_lj_hw)
-                    plt.axhline(theta_T_w[l, j][0], color='r')
-                    plt.title(f'psi = {psi_l:.2f}, ksi0 = {ksi0_val:.2f} Passing')
-                    plt.colorbar()
-                    plt.show()
-                """
-                # With the calculated values for all [t] at given psi, ksi_O,
-                # we can now calculate the bounce integrals
-                # As D_rf_lj is [t, i], we need to loop over the momentum values
-                # to calculate the bounce integral for each i
-                for i, _ in enumerate(p_norm_h):
+                for n_idx, harm in enumerate(n):
+                    # Split over the harmonics here because it will be important for the final quantities
+                    for t, theta_val in enumerate(theta_grid_j_w):
+                        D_rf_lj_hw[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                Edens_lj_w[t,:,:], ptTe[l, t], \
+                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
 
-                    DRF0_hw[l, i, j] = bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0_integrand*D_rf_lj_hw[:, i] , passing, False)
-                    DRF0D_hw[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0D_integrand*D_rf_lj_hw[:, i] , passing, True)
-                    DRF0F_hw[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0F_integrand*D_rf_lj_hw[:, i] , passing, True)
+                    # With the calculated values for all [t] at given psi, ksi_O,
+                    # we can now calculate the bounce integrals
+                    # As D_rf_lj is [t, i], we need to loop over the momentum values
+                    # to calculate the bounce integral for each i
+                    for i, _ in enumerate(p_norm_h):
 
-                # Finish off by adding the prefactor and the lambda*q factor
-                DRF0_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
-                DRF0D_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
-                DRF0F_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                        DRF0_hw[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0_integrand*D_rf_lj_hw[:, i, n_idx] , passing, False)
+                        DRF0D_hw[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0D_integrand*D_rf_lj_hw[:, i, n_idx] , passing, True)
+                        DRF0F_hw[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0F_integrand*D_rf_lj_hw[:, i, n_idx] , passing, True)
+
+                    # Finish off by adding the prefactor and the lambda*q factor
+                    DRF0_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                    DRF0D_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                    DRF0F_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
 
 
             else:
@@ -952,7 +948,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_hw = np.zeros((len(theta_grid_j_w), len(p_norm_h)))
+                D_rf_lj_hw = np.zeros((len(theta_grid_j_w), len(p_norm_h), len(n)))
 
                 # Interpolate the Wfct to the new theta grid
                 # We need to meshgrid the theta and npar, nperp grids
@@ -961,34 +957,29 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, n=[2, 3], F
 
                 Edens_interp_lj_w = Edens_interp_lj_w[:, :, :]/ptV_w[:, None, None]
 
-                for t, theta_val in enumerate(theta_grid_j_w):
+                for n_idx, harm in enumerate(n):
+                    # Split over the harmonics here because it will be important for the final quantities
+                    for t, theta_val in enumerate(theta_grid_j_w):
 
-                    D_rf_lj_hw[t, :] = \
-                        D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                              Edens_interp_lj_w[t, :, :], ptTe[l, t], \
-                                P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], n, eps).T
+                        D_rf_lj_hw[t, :, n_idx] = \
+                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                Edens_interp_lj_w[t, :, :], ptTe[l, t], \
+                                    P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
+                        
+                    # With the calculated values for all [t] at given psi, ksi_O,
+                    # we can now calculate the bounce integrals
+                    # As D_rf_lj is [t, i], we need to loop over the momentum values
+
+                    for i, _ in enumerate(p_norm_h):
+
+                        DRF0_hw[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0_integrand*D_rf_lj_hw[:, i, n_idx] , passing, False)
+                        DRF0D_hw[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0D_integrand*D_rf_lj_hw[:, i, n_idx] , passing, True)
+                        DRF0F_hw[l, i, j, n_idx] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0F_integrand*D_rf_lj_hw[:, i, n_idx] , passing, True)
                     
-                # With the calculated values for all [t] at given psi, ksi_O,
-                # we can now calculate the bounce integrals
-                # As D_rf_lj is [t, i], we need to loop over the momentum values
-                """
-                if np.amax(D_rf_lj_hw) > 1e-4:
-                    plt.contourf(p_norm_h,theta_grid_j_w, D_rf_lj_hw)
-                    plt.axhline(theta_T_w[l, j][0], color='r')
-                    plt.title(f'psi = {psi_l:.2f}, ksi0 = {ksi0_val:.2f} Trapped')
-                    plt.colorbar()
-                    plt.show()
-                """
-                for i, _ in enumerate(p_norm_h):
-
-                    DRF0_hw[l, i, j] = bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0_integrand*D_rf_lj_hw[:, i] , passing, False)
-                    DRF0D_hw[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0D_integrand*D_rf_lj_hw[:, i] , passing, True)
-                    DRF0F_hw[l, i, j] = np.sign(ksi0_val) * bounce_sum(d_theta_grid_j_w, CB_j_w, DRF0F_integrand*D_rf_lj_hw[:, i] , passing, True)
-                
-                # Finish off by adding the prefactor and the lambda*q factor
-                DRF0_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
-                DRF0D_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
-                DRF0F_hw[l, :, j] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                    # Finish off by adding the prefactor and the lambda*q factor
+                    DRF0_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                    DRF0D_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
+                    DRF0F_hw[l, :, j, n_idx] *= C_RF_hw[:, j] / lambda_q_w[l, j]
                 
     return DRF0_wh, DRF0D_wh, DRF0F_wh, DRF0_hw, DRF0D_hw, DRF0F_hw, DRF0_hh, DRF0D_hh, Trapksi0_h, Trapksi0_w
 
@@ -1011,21 +1002,21 @@ if __name__ == '__main__':
     #------------------------------#
 
     # WKBeam results, binned in appropriate dimensions
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test2.hdf5'
 
     # Equilibrium filename
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 
-    outputname = 'QL_bounce_TCV74302_test.h5'
+    outputname = 'QL_bounce_TCV74302_test2.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 50)
-    ksi0 = np.linspace(-1, 1, 150)
+    p_norm = np.linspace(0, 30, 100)
+    ksi0 = np.linspace(-1, 1, 200)
 
     #Harmonics to take into account
     harmonics = [2]
 
-    plot_option = 1
+    plot_option = 0
 
     #------------------------------#
     #---MPI implementation----------#
@@ -1046,23 +1037,23 @@ if __name__ == '__main__':
 
         # For the calculation, we'll need to have the volume element
         # Psi is already a half-grid by definition, so we calculate dpsi as such
-        d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
-        d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
-        #d_psi = [0.37**2-0.35**2]
+        #d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
+        #d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
+        d_psi = [0.37**2-0.35**2]
 
         idata = InputData(filename_Eq)
         Eq = TokamakEquilibrium(idata)
 
 
         # Variables to hold results
-        DRF0_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1))
-        DRF0D_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1))
-        DRF0F_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1))
-        DRF0_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0)))
-        DRF0D_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0)))
-        DRF0F_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0)))
-        DRF0_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1))
-        DRF0D_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1))
+        DRF0_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
+        DRF0D_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
+        DRF0F_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
+        DRF0_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
+        DRF0D_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
+        DRF0F_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
+        DRF0_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1, len(harmonics)))
+        DRF0D_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1, len(harmonics)))
         Trapksi0_h = np.zeros(len(psi))
         Trapksi0_w = np.zeros(len(psi))
 
@@ -1158,6 +1149,7 @@ if __name__ == '__main__':
 
         # Save the data
         with h5py.File(outputname, 'w') as file:
+            file.create_dataset('harmonics', data=harmonics)
             file.create_dataset('psi', data=psi)
             file.create_dataset('theta', data=theta)
             file.create_dataset('ksi0', data=ksi0)
@@ -1185,7 +1177,7 @@ if __name__ == '__main__':
             maxDrf = np.amax(DRF0_wh)
 
             for i, ax in enumerate(axs.flatten()):
-                ax.pcolormesh(PP, PPer, DRF0_wh[2*i].T, cmap='plasma', vmax=maxDrf)
+                ax.pcolormesh(PP, PPer, np.sum(DRF0_wh[2*i], axis=-1).T, cmap='plasma', vmax=maxDrf)
                 ax.set_title(f'psi = {rho[2*i]**2:.2f}')
                 ax.set_xlabel(r'$p\{||}$')
                 ax.set_ylabel(r'$p_{\perp}$')

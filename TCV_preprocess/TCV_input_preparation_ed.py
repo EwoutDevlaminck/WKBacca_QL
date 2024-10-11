@@ -629,8 +629,8 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 """----------------------------------"""
 
 if __name__ == '__main__':
-    filename = r"/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/TCV_preprocess/EQUIL_TCV_72644_1.05s.mat"
-    antenna_location = [122.99, -0.29] #In cm, position of the antenna in R, Z
+    filename = r"/home/devlamin/Documents/WKBeam_related/WKBacca_QL/TCV_preprocess/72644_1.25/For_WKBeam_with_scrapeoff/EQUIL_TCV_72644_1.2500.mat"
+    antenna_location = [122.82, -0.30] #In cm, position of the antenna in R, Z
     # For L1/L4 usually around 122, 0. For L2/L5 around 122, 50.5.
     # This is basically to check if the density goes to zero at the antenna location
     TCV_input_prep_ed(filename, plot_option=1, correct_psi_option=1, antenna_loc=antenna_location)

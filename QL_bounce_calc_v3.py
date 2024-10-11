@@ -200,7 +200,7 @@ def N_par_resonant(inv_kp, p_Te, Gamma, X, harm):
     Calculate the resonant n_par. p_norm and Gamma are of shape (n_p), StixY is a scalar.
     Returns an array of the same shape as p_norm
     """
-    return -(Gamma - harm*X)/p_Te *inv_kp
+    return (Gamma - harm*X)/p_Te *inv_kp
 
 #@jit(nopython=True)
 def polarisation(N2, K_angle, P, R, L, S):
@@ -452,7 +452,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
         # The calculation is split completely into the psi grid,
         # as the calculation is independent for every psi value
 
-        ptB_Int_at_psi = interp1d(theta, ptB[l, :])
+        ptB_Int_at_psi = interp1d(theta, ptB[l, :],fill_value=np.amax(ptB[l, :]), bounds_error=False)
 
         _, Trapksi0_w[l], theta_T_w[l] = Trapping_boundary(ksi0_w, ptB_Int_at_psi, theta)
         _, Trapksi0_h[l], theta_T_h[l] = Trapping_boundary(ksi0_h, ptB_Int_at_psi, theta)
@@ -716,13 +716,13 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 # See the notes for the derivation of these
                 DRF0_integrand = ksi0_over_ksi_j_h**2 * B_ratio_h
                 min_DRF0_integrand = np.amin(DRF0_integrand)
-                DRF0_integrand = np.where(DRF0_integrand > 50*min_DRF0_integrand, 50*min_DRF0_integrand, DRF0_integrand)
+                DRF0_integrand = np.where(DRF0_integrand > 10*min_DRF0_integrand, 10*min_DRF0_integrand, DRF0_integrand)
                 DRF0D_integrand = ksi0_over_ksi_j_h
                 min_DRF0D_integrand = np.amin(DRF0D_integrand)
-                DRF0D_integrand = np.where(DRF0D_integrand > 50*min_DRF0D_integrand, 50*min_DRF0D_integrand, DRF0D_integrand)
+                DRF0D_integrand = np.where(DRF0D_integrand > 10*min_DRF0D_integrand, 10*min_DRF0D_integrand, DRF0D_integrand)
                 DRF0F_integrand = (B_ratio_h -1) * ksi0_over_ksi_j_h**3
                 min_DRF0F_integrand = np.amin(DRF0F_integrand)
-                DRF0F_integrand = np.where(DRF0F_integrand > 50*min_DRF0F_integrand, 50*min_DRF0F_integrand, DRF0F_integrand)
+                DRF0F_integrand = np.where(DRF0F_integrand > 10*min_DRF0F_integrand, 10*min_DRF0F_integrand, DRF0F_integrand)
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
@@ -939,13 +939,13 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 # See the notes for the derivation of these
                 DRF0_integrand = ksi0_over_ksi_j_w**2 * B_ratio_w
                 min_DRF0_integrand = np.amin(DRF0_integrand)
-                DRF0_integrand = np.where(DRF0_integrand > 50*min_DRF0_integrand, 50*min_DRF0_integrand, DRF0_integrand)
+                DRF0_integrand = np.where(DRF0_integrand > 10*min_DRF0_integrand, 10*min_DRF0_integrand, DRF0_integrand)
                 DRF0D_integrand = ksi0_over_ksi_j_w
                 min_DRF0D_integrand = np.amin(DRF0D_integrand)
-                DRF0D_integrand = np.where(DRF0D_integrand > 50*min_DRF0D_integrand, 50*min_DRF0D_integrand, DRF0D_integrand)
+                DRF0D_integrand = np.where(DRF0D_integrand > 10*min_DRF0D_integrand, 10*min_DRF0D_integrand, DRF0D_integrand)
                 DRF0F_integrand = (B_ratio_w -1) * ksi0_over_ksi_j_w**3
                 min_DRF0F_integrand = np.amin(DRF0F_integrand)
-                DRF0F_integrand = np.where(DRF0F_integrand > 50*min_DRF0F_integrand, 50*min_DRF0F_integrand, DRF0F_integrand)
+                DRF0F_integrand = np.where(DRF0F_integrand > 10*min_DRF0F_integrand, 10*min_DRF0F_integrand, DRF0F_integrand)
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
@@ -1003,16 +1003,16 @@ if __name__ == '__main__':
     #------------------------------#
 
     # WKBeam results, binned in appropriate dimensions
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
-
-    # Equilibrium filename
-    filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
-
-    outputname = 'QL_bounce_TCV74302_test.h5'
+    #filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
+    #filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
+    #outputname = 'QL_bounce_TCV74302_test.h5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/output/L4_binned_QL.hdf5'
+    filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
+    outputname = 'QL_bounce_TCV72644_1.25_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 10)
-    anglegrid = np.linspace(-np.pi, 0, 30)
+    p_norm = np.linspace(0, 15, 100)
+    anglegrid = np.linspace(-np.pi, 0, 300)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 

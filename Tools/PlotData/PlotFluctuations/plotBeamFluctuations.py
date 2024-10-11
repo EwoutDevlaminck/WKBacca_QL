@@ -22,6 +22,8 @@ from RayTracing.modules.scattering.GaussianModel import GaussianModel_base
 from RayTracing.modules.scattering.ShaferModel import ShaferModel_base
 from Tools.PlotData.CommonPlotting import plotting_functions
 
+import CommonModules.physics_constants as PhysConst
+
 # Sample the envelope of the fluctuations as used by the code
 def sample_fluct_envelop(R1d, Z1d, axis, envelope, Lpp, radial_coord, Eq):
     
@@ -80,8 +82,12 @@ def plot_beam_fluct(inputdata):
         print('Reading data file...\n')
         fid = h5py.File(file,'r')
         FreqGHz.append(fid.get('FreqGHz')[()])
+
+        c = PhysConst.SpeedOfLight               # speed of light in cm / s
+        omega = PhysConst.AngularFrequency(FreqGHz[-1]) # 2.*math.pi*freq*1e9
+        k0 = PhysConst.WaveNumber(omega)         # omega / c  wave vector in free space
         mode.append(fid.get('Mode')[()])
-        Wfct.append(fid.get('BinnedTraces')[()])
+        Wfct.append(fid.get('BinnedTraces')[()]) # This is the integrated v from your notes, so Normfac * (k0/2pi)³ * w_unit
         try:
             Absorption.append(fid.get('Absorption')[()])
             Abs_recorded = True
@@ -141,11 +147,31 @@ def plot_beam_fluct(inputdata):
 
 
 
-        Wfct[i] = Wfct[i]/DeltaX/DeltaZ
+        #Wfct[i] = Wfct[i]/DeltaX/DeltaZ
         
         if Abs_recorded:
-            Absorption[i] /= DeltaX*DeltaZ
 
+            
+            
+            P_abs = np.sum(Absorption[i], axis=(0,1))
+
+            # And convert to MW/m³ by dividing by the toroidal length
+            R = np.linspace(Xmin_beam, Xmax_beam, nmbrX_beam) / 100 # m
+            Z = np.linspace(Zmin_beam, Zmax_beam, nmbrZ_beam) / 100 # m
+            ZZ, RR = np.meshgrid(Z, R)
+
+            Absorption[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
+
+            # Calculate the energy density in a gridcell [J/m³]
+            # E_dens = 4pi/c * BinnedTraces /dV
+
+            Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
+
+            print(f'Total field energy = {np.sum(Wfct[i])}J')
+
+            Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # Devided by toroidal volume element in m³
+
+    
     ##############################################
     
     #Now move on to equilibrium and fluctuation level calculations
@@ -283,8 +309,8 @@ def plot_beam_fluct(inputdata):
     
         #Set the lower bound to be transparent, so we see the background contourf
         transMap.set_under(color='b', alpha=0.)
-        lowerBound = 5e-3 #What's the lowest value we still display?
         upperBound = np.amax(Wfct[beam][:, :, 0])
+        lowerBound = upperBound*1e-2 #What's the lowest value we still display?
         
         Xlist_beam = np.linspace(Xmin_beam,Xmax_beam,nmbrX_beam)
         Zlist_beam = np.linspace(Zmin_beam,Zmax_beam,nmbrZ_beam)
@@ -295,14 +321,17 @@ def plot_beam_fluct(inputdata):
         #Make it so that the colourmap only starts at lowerBound
         displayedMap = plt.cm.ScalarMappable(norm=clrs.Normalize(lowerBound, upperBound), cmap=transMap)  
         colorbarBeam = plt.colorbar(displayedMap, orientation='vertical', pad=.1, shrink=.7)
-        colorbarBeam.set_label(label=f'|E|² (A.U.)\n f={FreqGHz[beam]}GHz', size=10, labelpad=-30, y=1.08, rotation=0)
+        colorbarBeam.set_label(label=f'|E|² (J/m³)\n f={FreqGHz[beam]}GHz', size=10, labelpad=-30, y=1.08, rotation=0)
 
     #Plot the absorption on top of the beam
     if Abs_recorded:
+        print(np.array(Absorption).shape)
         Absorption = np.sum(Absorption, axis=0)
-        levels = np.linspace(np.amax(Absorption)/100, np.amax(Absorption), 10)
-        ax1.contour(Xgrid_beam,Zgrid_beam,Absorption[:,:,0],levels, cmap='afmhot', zorder=12)
-    
+        levels = np.linspace(np.amax(Absorption)/100, np.amax(Absorption), 100)
+        abs_fig = ax1.contour(Xgrid_beam,Zgrid_beam,Absorption[:,:,0],levels, cmap='afmhot', zorder=12)
+        colorbarAbs = plt.colorbar(abs_fig, orientation='vertical', pad=.1, shrink=.7)
+        colorbarAbs.set_label(label=r'$P_{abs} (MW/m³)$', size=10, labelpad=-30, y=1.08, rotation=0)
+        print(f'Total P_abs={P_abs[0]} +- {P_abs[1]}MW')
     #Plot the cyclotron resonances
     h1, h2, h3 = plotting_functions.add_cyclotron_resonances(R1d, Z1d, StixY, ax1)
     

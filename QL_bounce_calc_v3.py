@@ -200,7 +200,7 @@ def N_par_resonant(inv_kp, p_Te, Gamma, X, harm):
     Calculate the resonant n_par. p_norm and Gamma are of shape (n_p), StixY is a scalar.
     Returns an array of the same shape as p_norm
     """
-    return (Gamma - harm*X)/p_Te *inv_kp
+    return -(Gamma - harm*X)/p_Te *inv_kp
 
 #@jit(nopython=True)
 def polarisation(N2, K_angle, P, R, L, S):
@@ -1011,7 +1011,7 @@ if __name__ == '__main__':
     outputname = 'QL_bounce_TCV72644_1.25_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 100)
+    p_norm = np.linspace(0, 15, 140)
     anglegrid = np.linspace(-np.pi, 0, 300)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
@@ -1101,31 +1101,34 @@ if __name__ == '__main__':
         num_workers = size - 1
         task_idx = 0
         active_workers = 0
+        finished_tasks = 0
 
         # Start distributing initial tasks
         for i in range(1, min(num_workers + 1, num_tasks + 1)):
             comm.send(task_queue[task_idx], dest=i, tag=1)
             task_idx += 1
             active_workers += 1
+            print(f'\rActive workers: {active_workers}', end='', flush=True)
 
         while task_idx < num_tasks or active_workers > 0:
             # Receive results
             result = comm.recv(source=MPI.ANY_SOURCE, tag=2)
             worker_id, idx, result_data = result
             active_workers -= 1
+            finished_tasks += 1
+            print(f'\rActive workers: {active_workers}, Progress: {finished_tasks}/{num_tasks}', end='', flush=True)
 
             # Update results arrays with the data from worker
             DRF0_wh[idx], DRF0D_wh[idx], DRF0F_wh[idx], DRF0_hw[idx], \
             DRF0D_hw[idx], DRF0F_hw[idx], DRF0_hh[idx], DRF0D_hh[idx], Trapksi0_h[idx], Trapksi0_w[idx] = result_data
 
-            #Print progress
-            print(f'\rProgress: {task_idx}/{num_tasks}', end='', flush=True)
 
             if task_idx < num_tasks:
                 # Send new task to this worker
                 comm.send(task_queue[task_idx], dest=worker_id, tag=1)
                 task_idx += 1
                 active_workers += 1
+                print(f'\rActive workers: {active_workers}, Progress: {finished_tasks}/{num_tasks}', end='', flush=True)
 
         # Send termination signal
         for i in range(1, size):
@@ -1157,7 +1160,7 @@ if __name__ == '__main__':
 
     if rank == 0:
         toc = time.time()
-        print(f'\rTime taken: {toc-tic:.2f} s')
+        print(f'\rTime taken: {toc-tic:.2f} s', flush=True)
 
         # Save the data
         with h5py.File(outputname, 'w') as file:

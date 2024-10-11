@@ -1011,8 +1011,8 @@ if __name__ == '__main__':
     outputname = 'QL_bounce_TCV74302_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 50)
-    anglegrid = np.linspace(-np.pi, 0, 150)
+    p_norm = np.linspace(0, 15, 10)
+    anglegrid = np.linspace(-np.pi, 0, 30)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 
@@ -1052,7 +1052,6 @@ if __name__ == '__main__':
         _, _, _, _, _, _, ptNe, ptTe, _, _, _, _, _ = config_quantities(psi, theta, omega, Eq)
         Ne_ref = np.amax(ptNe)
         Te_ref = np.amax(ptTe)
-        print(Ne_ref, Te_ref)
 
         # Variables to hold results
         DRF0_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))

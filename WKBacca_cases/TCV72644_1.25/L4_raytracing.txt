@@ -145,7 +145,7 @@ reflektometrierhoTreshhold = 1.0 # rho when tracing is stopped.
 # SCATTERING
 #############################################################################
 # set True in the following line if you wish to turn on the scattering.
-scattering = False
+scattering = True
 
 # set True in the following line if you wish to take into account
 # cross-polarization scattering
@@ -170,7 +170,7 @@ scatteringLengthParallel = 10000.
 
 # in the next line, a python lambda-function is defined, which serves as a model
 # defining the square root of the relative electron density fluctuation variance
-scatteringDeltaneOverne = lambda ne,rho,theta: 0.6*math.exp(-(rho-0.95)**2 / 0.15**2) 
+scatteringDeltaneOverne = lambda ne,rho,theta: 0.4*math.exp(-(rho-0.95)**2 / 0.15**2)*math.sqrt((1/2+1/2*math.cos(theta)))
 #scatteringDeltaneOverne = 'fluct_amplitude' 
 
 # For the model of Shafer et al. this should be replaced by a flot

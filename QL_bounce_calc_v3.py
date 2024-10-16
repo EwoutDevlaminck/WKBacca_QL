@@ -599,12 +599,12 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                     for t, theta_val in enumerate(theta_grid_j_h):
                         D_rf_lj_wh[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                                Edens_lj_h[t, :,:], ptTe[l, t], \
+                                Edens_lj_h[t, :,:], Te_ref, \
                                     P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
                         
                         D_rf_lj_hh[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_lj_h[t, :,:], ptTe[l, t], \
+                                Edens_lj_h[t, :,:], Te_ref, \
                                     P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
             
                     # With the calculated values for all [t] at given psi, ksi_O,
@@ -742,12 +742,12 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
 
                         D_rf_lj_wh[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_h[t, :, :], ptTe[l, t], \
+                                Edens_interp_lj_h[t, :, :], Te_ref, \
                                     P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
 
                         D_rf_lj_hh[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_h[t, :, :], ptTe[l, t], \
+                                Edens_interp_lj_h[t, :, :], Te_ref, \
                                     P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
                         
                     # With the calculated values for all [t] at given psi, ksi_O,
@@ -859,7 +859,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                     for t, theta_val in enumerate(theta_grid_j_w):
                         D_rf_lj_hw[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_lj_w[t,:,:], ptTe[l, t], \
+                                Edens_lj_w[t,:,:], Te_ref, \
                                     P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
 
                     # With the calculated values for all [t] at given psi, ksi_O,
@@ -964,7 +964,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
 
                         D_rf_lj_hw[t, :, n_idx] = \
                             D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_w[t, :, :], ptTe[l, t], \
+                                Edens_interp_lj_w[t, :, :], Te_ref, \
                                     P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
                         
                     # With the calculated values for all [t] at given psi, ksi_O,
@@ -1006,12 +1006,12 @@ if __name__ == '__main__':
     #filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
     #filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
     #outputname = 'QL_bounce_TCV74302_test.h5'
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/output/L4_binned_QL.hdf5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
     outputname = 'QL_bounce_TCV72644_1.25_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 140)
+    p_norm = np.linspace(0, 15, 100)
     anglegrid = np.linspace(-np.pi, 0, 300)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)

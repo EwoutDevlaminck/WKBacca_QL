@@ -21,7 +21,7 @@ def sum_over_dimensions(data, dims):
     for dim in dims:
         l = data.shape[dim]
         data = np.nansum(data, axis=dim)
-        data /= l
+        #data /= l
     return data
 
 def read_h5file(filename):

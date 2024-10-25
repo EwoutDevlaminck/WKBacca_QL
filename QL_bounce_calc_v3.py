@@ -277,7 +277,8 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, harm, eps, 
     # This is done for every point in the grid. If it is not within dNpar/2 of any value in Npar, the index is set to -1.
     # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
 
-    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), k=5, distance_upper_bound=d_npar/2) #/2
+    dist_bound = d_npar/2 # How far away a point can be to be considered resonant
+    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), k=2, distance_upper_bound=dist_bound) #/2
     res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
     
     i_res, n_par_res = np.where(res_condition_N_par != -1)
@@ -295,7 +296,8 @@ def D_RF_nobounce(p_norm, ksi, npar, nperp, Wfct, Te, P, X, R, L, S, harm, eps, 
         # And if so, for what value of Nperp.
 
         #TEST Gaussian prefactor based on the resonance condition
-        prefac = 1 #np.exp(-dist_N_par[i,m]**2/(2*d_npar**2))
+        #prefac = np.exp(-dist_N_par[i,m]**2/(1/2*d_npar**2)) # Gaussian weight with sigma = d_npar/2
+        prefac = 1/ (2*dist_bound) # Uniform weight
         mask_beam_present = Wfct[i_npar, :] > 0 
         indeces_Nperp_beam_present = np.where(mask_beam_present)[0]
         
@@ -341,7 +343,7 @@ def bounce_sum(d_theta_grid_j, CB_j, Func, passing, sigma_dep=False):
 #---THIS IS THE MAIN FUNCTION---#
 #-------------------------------#
 
-def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, eps=np.finfo(np.float32).eps):
+def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, eps=np.finfo(np.float32).eps):
 
     """
     The main function to calculate the RF diffusion coefficients.
@@ -361,8 +363,8 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
             The parallel refractive index
         nperp: np.array [length given by WKBeam binning]
             The perpendicular refractive index
-        Wfct: np.array [l, t, npar, nperp, 2]
-            The electric power density in [J/m^3] from WKbeam
+        Edens: np.array [l, t, npar, nperp]
+            The electric power density in [J/m^3/[N-volume]] from WKbeam
         Eq: equilibrium object
             The equilibrium object, containing the equilibrium quantities
             From WKBeam too
@@ -471,17 +473,11 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
         # The dV_r calculation is left for inside the loop, as it depends on the theta grid
         # The dV_N calculation is done here, as it is independent of the theta grid
 
-        d_npar = npar[1] - npar[0] # Assume a constant grid for now
-        d_nperp = nperp[1] - nperp[0] # Assume a constant grid for now
-        dV_N = 2 * np.pi * nperp * d_npar * d_nperp
-        Edens = 4 * np.pi / c * 1e6 * Wfct[l, :, :, :, 0] / dV_N[None, None, :] # J/[N-volume]
-
-
         # Precalculate an interpolation function for Edens at psi_l
         # This is only needed for ksi values that correspond to trapped particles
         # The actual interpolation will differ for each ksi value, but the function is the same
-
-        Edens_Int_at_psi = RegularGridInterpolator((theta, npar, nperp), Edens, bounds_error=False, fill_value=None)
+        Edens_at_psi = Edens[l,:,:,:]
+        Edens_Int_at_psi = RegularGridInterpolator((theta, npar, nperp), Edens_at_psi, bounds_error=False, fill_value=None)
 
         #--------------------------------#
         #---Plotting the resonance surface---#
@@ -489,18 +485,20 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
 
         # This part is usually turned off, but can show the resonance condition in phase space for given psi, theta
 
-        show_resonance = True
+        show_resonance = False
 
         if show_resonance:
-            for t in range(0, len(theta), 3):
-                if Edens[t].max() > 0 and psi_l > 0.7:
+            d_npar = npar[1] - npar[0] # Assume a constant grid for now
+            d_nperp = nperp[1] - nperp[0] # Assume a constant grid for now
+            for t in range(0, len(theta), 50):
+                if Edens_at_psi[t].max() > 0 and psi_l <0.01:
                     # Precalculate the inverse ksi*p_norm grid, with a small offset to avoid division by zero
                     Ksi, P_norm = np.meshgrid(ksi0_h, p_norm_w)
                     P_par, P_perp = P_norm * Ksi, P_norm * np.sqrt(1 - Ksi**2)
                     inv_kp = 1 / (Ksi* P_norm + eps)
 
                     # Calculate the relativistic factor, given the thermal momentum at this location
-                    p_Te = pTe_from_Te(ptTe[l, t]) # Normalised to m_e*c
+                    p_Te = pTe_from_Te(Te_ref) # Normalised to m_e*c
                     Gamma = gamma(P_norm, p_Te)
 
                     resonance_N_par = N_par_resonant(inv_kp, p_Te, Gamma, X[l, t], n[0])
@@ -511,19 +509,22 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                     # This in fact replaces the integral over Npar, as we now just have a 2D array indicating what value of Npar is resonant, if any.
                     npar_tree = KDTree(npar.reshape(-1, 1))
 
-                    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), distance_upper_bound=d_npar*4) #/2
+                    dist_N_par, ind_N_par = npar_tree.query(np.expand_dims(resonance_N_par, axis=-1), k=1, distance_upper_bound=d_npar/2) #/2
                     res_condition_N_par = np.where(np.isinf(dist_N_par), -1, ind_N_par)
+                    print(res_condition_N_par.shape)
                     
                     res_mask_Pspace = np.where(res_condition_N_par != -1, True, False) # Mask for the resonant values in p_norm for given ksi
 
                     plt.figure()
+                    npar_required = np.array([[npar[index] for index in row] for row in res_condition_N_par])
+                    npar_required[res_condition_N_par == -1] = np.nan
                     pl = plt.contour(P_par, P_perp, resonance_N_par, levels=np.linspace(-1, 1, 11), cmap='coolwarm')
-                    norescon = plt.contour(P_par, P_perp, res_condition_N_par, colors='k', levels=[-1])
-                    rescon = plt.contourf(P_par, P_perp, res_condition_N_par, cmap='Greens', levels=np.arange(0, len(Npar)))
+                    norescon = plt.contour(P_par, P_perp, npar_required, colors='k', levels=[-1])
+                    rescon = plt.contourf(P_par, P_perp, npar_required, cmap='Greens', levels=np.linspace(npar.min(), npar.max(), len(npar)))
                     # Highlight the trapping region, above the curve P_perp = sqrt(1 - ksi_T^2) * P_par/ksi_T * sign(P_par)
                     plt.plot(P_par, np.sqrt(1 - Trapksi0_h[l]**2)*P_par/Trapksi0_h[l]*np.sign(P_par), color='k', linestyle='-', linewidth=1)
                     plt.clabel(pl, inline=True, fontsize=8)
-                    plt.colorbar(rescon, label='Npar index')
+                    plt.colorbar(rescon, label='Npar required')
                     plt.xlim([P_par.min(), P_par.max()])
                     plt.ylim([P_perp.min(), P_perp.max()])
                     plt.xlabel('P_par')
@@ -570,13 +571,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 ksi_vals = np.sign(ksi0_val) * np.sqrt(1 - (B_ratio_h)*(1 - ksi0_val**2))
                 ksi0_over_ksi_j_h = ksi0_val/ksi_vals
            
-
-                # Calculate the configuration space volume element. [t]
-                # This is done only now because the theta grid is of course important
-                ptV_h = np.zeros_like(theta_grid_j_h)
-                for t, theta_val in enumerate(theta_grid_j_h):
-                    # dV = 2pi * R dR dZ = 2pi * J dtheta dpsi, with dV in cm^3, and thus J in cm^3, hence the 1e-6 factor
-                    ptV_h[t] = 2 * np.pi * 1e-6 * d_psi[l] * d_theta_grid_j_h[t] * Eq.volume_element_J(theta_val, psi_l)
                 # Calculate the lambda*q factor [t]
                 lambda_q_h[l, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, ksi0_over_ksi_j_h, passing, False)
                     
@@ -591,8 +585,10 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 D_rf_lj_wh = np.zeros((len(theta), len(p_norm_w), len(n)))
                 D_rf_lj_hh = np.zeros((len(theta), len(p_norm_h), len(n)))
 
-                # Divide by the volume element to get the electric field energy density in J/m^3
-                Edens_lj_h = Edens[:, :, :]/ptV_h[:, None, None] # J/(m^3 * [N-volume])
+                # No new theta grid
+                Edens_lj_h = Edens_at_psi
+
+                rp_Rp = np.sqrt(R_axis_at_psi_j_h**2 + Z_axis_at_psi_j_h**2)/Rp
 
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
@@ -628,7 +624,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
 
                     DRF0_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j] 
                     DRF0D_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
-                if np.amax(DRF0_wh[l, :, j]) > 100:
+                if False:
                     plt.figure(figsize=(10, 10))
                     ax = plt.subplot(221)
                     ax.plot(p_norm_w, DRF0_wh[l, :, j, n_idx], label='DRF0')
@@ -702,12 +698,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 # Precalculate ksi over the theta grid [t]
                 ksi_vals = np.sign(ksi0_val) * np.sqrt(1 - (B_ratio_h)*(1 - ksi0_val**2))
                 ksi0_over_ksi_j_h = ksi0_val/ksi_vals
-    
-                # Calculate the configuration space volume element. [t]
-                # This is done only now because the theta grid is of course important
-                ptV_h = np.zeros_like(theta_grid_j_h)
-                for t, theta_val in enumerate(theta_grid_j_h):
-                    ptV_h[t] = 2 * np.pi * 1e-6 * d_psi[l] * d_theta_grid_j_h[t] * Eq.volume_element_J(theta_val, psi_l)
 
                 # Calculate the lambda*q factor [t]
                 lambda_q_h[l, j] = bounce_sum(d_theta_grid_j_h, CB_j_h, ksi0_over_ksi_j_h, passing, False)
@@ -734,8 +724,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 Theta_grid_j_h, Npar_grid_j_h, Nperp_grid_j_h = np.meshgrid(theta_grid_j_h, npar, nperp, indexing='ij')
                 Edens_interp_lj_h = Edens_Int_at_psi((Theta_grid_j_h, Npar_grid_j_h, Nperp_grid_j_h))
 
-                Edens_interp_lj_h = Edens_interp_lj_h[:, :, :]/ptV_h[:, None, None]
-
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
                     for t, theta_val in enumerate(theta_grid_j_h):
@@ -754,6 +742,8 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                     # we can now calculate the bounce integrals
                     # As D_rf_lj is [t, i], we need to loop over the momentum values
 
+                    # Trying some shit
+                    rp_Rp = np.sqrt(R_axis_at_psi_j_h**2 + Z_axis_at_psi_j_h**2)/Rp
                     for i, _ in enumerate(p_norm_w):
 
                         DRF0_wh[l, i, j, n_idx] = bounce_sum(d_theta_grid_j_h, CB_j_h, DRF0_integrand*D_rf_lj_wh[:, i, n_idx] , passing, False)
@@ -773,7 +763,7 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                     DRF0_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
                     DRF0D_hh[l, :, j, n_idx] *= C_RF_hh[:, j] / lambda_q_h[l, j]
                 
-                if np.amax(DRF0_wh[l, :, j]) > 1e9:
+                if False:
                     index_i = np.argmax(DRF0_wh[l, :, j, n_idx])
                     plt.figure(figsize=(10, 10))
                     ax = plt.subplot(221)
@@ -832,13 +822,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 ksi_vals = np.sign(ksi0_val) * np.sqrt(1 - (B_ratio_w)*(1 - ksi0_val**2))
                 ksi0_over_ksi_j_w = ksi0_val/ksi_vals
 
-
-                # Calculate the configuration space volume element. [t]
-                # This is done only now because the theta grid is of course important
-                ptV_w = np.zeros_like(theta_grid_j_w)
-                for t, theta_val in enumerate(theta_grid_j_w):
-                    ptV_w[t] = 2 * np.pi * 1e-6 * d_psi[l] * d_theta_grid_j_w[t] * Eq.volume_element_J(theta_val, psi_l)
-                
                 # Calculate the lambda*q factor [t]
                 lambda_q_w[l, j] = bounce_sum(d_theta_grid_j_w, CB_j_w, ksi0_over_ksi_j_w, passing, False)
                     
@@ -852,7 +835,10 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
 
                 D_rf_lj_hw = np.zeros((len(theta), len(p_norm_h), len(n)))
 
-                Edens_lj_w = Edens[:, :, :]/ptV_w[:, None, None]
+                Edens_lj_w = Edens_at_psi
+
+                rp_Rp = np.sqrt(R_axis_at_psi_j_w**2 + Z_axis_at_psi_j_w**2)/Rp
+
 
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
@@ -926,12 +912,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 ksi_vals = np.sign(ksi0_val) * np.sqrt(1 - (B_ratio_w)*(1 - ksi0_val**2))
                 ksi0_over_ksi_j_w = ksi0_val/ksi_vals
 
-                # Calculate the configuration space volume element. [t]
-                # This is done only now because the theta grid is of course important
-                ptV_w = np.zeros_like(theta_grid_j_w)
-                for t, theta_val in enumerate(theta_grid_j_w):
-                    ptV_w[t] = 2 * np.pi * 1e-6 * d_psi[l] * d_theta_grid_j_w[t] * Eq.volume_element_J(theta_val, psi_l)
-
                 # Calculate the lambda*q factor [t]
                 lambda_q_w[l, j] = bounce_sum(d_theta_grid_j_w, CB_j_w, ksi0_over_ksi_j_w, passing, False)
 
@@ -956,7 +936,8 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Wfct, Eq, Ne_ref, Te_
                 Theta_grid_j_w, Npar_grid_j_w, Nperp_grid_j_w = np.meshgrid(theta_grid_j_w, npar, nperp, indexing='ij')
                 Edens_interp_lj_w = Edens_Int_at_psi((Theta_grid_j_w, Npar_grid_j_w, Nperp_grid_j_w))
 
-                Edens_interp_lj_w = Edens_interp_lj_w[:, :, :]/ptV_w[:, None, None]
+                rp_Rp = np.sqrt(R_axis_at_psi_j_w**2 + Z_axis_at_psi_j_w**2)/Rp
+
 
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
@@ -1006,13 +987,13 @@ if __name__ == '__main__':
     #filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
     #filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
     #outputname = 'QL_bounce_TCV74302_test.h5'
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/No_fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
     outputname = 'QL_bounce_TCV72644_1.25_test.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 100)
-    anglegrid = np.linspace(-np.pi, 0, 300)
+    p_norm = np.linspace(0, 15, 40)
+    anglegrid = np.linspace(-np.pi, 0, 70)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 
@@ -1047,6 +1028,38 @@ if __name__ == '__main__':
         idata = InputData(filename_Eq)
         Eq = TokamakEquilibrium(idata)
 
+        psi = rho**2
+        d_npar = Npar[1] - Npar[0]
+        d_nperp = Nperp[1] - Nperp[0]
+        d_theta = theta[1] - theta[0]
+        dV_N = 2 * np.pi * Nperp * d_nperp * d_npar
+        ptV = np.zeros((len(rho), len(theta)))
+        R = np.zeros((len(rho), len(theta)))
+        Z = np.zeros((len(rho), len(theta)))
+
+        for l, psi_val in enumerate(psi):
+            for t, theta_val in enumerate(theta):
+                ptV[l, t] = 2*np.pi * 1e-6 * d_psi[l] * d_theta * Eq.volume_element_J(theta_val, psi_val)
+                R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
+        Edens =  Wfct[:,:,:,:,0] /ptV[:,:, None, None] 
+        Edens /= 2*np.pi*(R[:,:, None, None]/100) # Average over the toroidal angle
+        Edens /= dV_N[None, None, None, :]
+        Edens /= 2*np.pi*Nperp[None, None, None, :] # Average over the refractive index perpendicular angle
+        Edens *= 4*np.pi /c * 1e6 # Gives average energy density in J/m^3/[N-volume], on psi, theta, N_par, N_perp grid!
+        if plot_option:
+            plt.figure()
+            ax = plt.subplot(111)
+            beam= ax.contourf(R, Z, np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)), levels=50)
+            absorb = ax.contour(R, Z, np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*dV_N[None, None, None, :], axis=(2, 3)), levels=10, cmap='hot')
+            flux_surf = ax.contour(R, Z, np.tile(rho, (len(theta), 1)).T, levels=10, colors='black', linestyles='dashed', linewidths=0.5)
+            ax.clabel(flux_surf, flux_surf.levels, inline=True, fontsize=10)
+            ax.set_aspect('equal')
+            plt.colorbar(beam)
+            plt.title('Beam in poloidal plane, resolved in rho, theta')
+        plt.show()
+            
+
+
         # Calculate the reference quantities needed for the normalisation
         omega = phys.AngularFrequency(FreqGHz)
         _, _, _, _, _, _, ptNe, ptTe, _, _, _, _, _ = config_quantities(psi, theta, omega, Eq)
@@ -1065,7 +1078,7 @@ if __name__ == '__main__':
         Trapksi0_h = np.zeros(len(psi))
         Trapksi0_w = np.zeros(len(psi))
 
-        task_queue = [(i, psi_val, d_psi[i], Wfct[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
+        task_queue = [(i, psi_val, d_psi[i], Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
 
         # Sort task queue by descending psi values
         # Higher psi values have more trapped particles, which are more expensive to calculate
@@ -1141,15 +1154,15 @@ if __name__ == '__main__':
             if task is None:
                 break
 
-            idx, psi_value, d_psi_value, Wfct_slice = task
+            idx, psi_value, d_psi_value, Edens_slice = task
 
             #Expand dimension of Wfct to have len=1 in the first dimension
-            Wfct_slice = np.expand_dims(Wfct_slice, axis=0)
+            Edens_slice = np.expand_dims(Edens_slice, axis=0)
 
             # Perform the calculation
             DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
             DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc, Trapksi0_h_loc, Trapksi0_w_loc = \
-            D_RF([psi_value], [d_psi_value], theta, p_norm, ksi0, Npar, Nperp, Wfct_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz)
+            D_RF([psi_value], [d_psi_value], theta, p_norm, ksi0, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz)
 
             result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
                         DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0], Trapksi0_h_loc, Trapksi0_w_loc)

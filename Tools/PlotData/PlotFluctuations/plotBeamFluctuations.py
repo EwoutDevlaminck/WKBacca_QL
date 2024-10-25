@@ -161,6 +161,7 @@ def plot_beam_fluct(inputdata):
             ZZ, RR = np.meshgrid(Z, R)
 
             Absorption[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
+            Absorption[i] /= 2 * np.pi * np.expand_dims(RR, axis=-1) # Averaged over the toroidal angle
 
             # Calculate the energy density in a gridcell [J/m³]
             # E_dens = 4pi/c * BinnedTraces /dV
@@ -170,6 +171,7 @@ def plot_beam_fluct(inputdata):
             print(f'Total field energy = {np.sum(Wfct[i])}J')
 
             Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # Devided by toroidal volume element in m³
+            Wfct[i] /= 2 * np.pi * np.expand_dims(RR, axis=-1) # Averaged over the toroidal angle
 
     
     ##############################################

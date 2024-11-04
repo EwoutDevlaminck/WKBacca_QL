@@ -237,7 +237,7 @@ def D_RF_prefactor(p_norm, ksi0, Ne_ref, Te_ref, omega, eps):
     inv_kabsp = 1 /(abs(Ksi0)* P_norm + eps)
     omega_pe = disp.disParamomegaP(Ne_ref)
 
-    prefac =  16*np.pi**3 * Gamma * inv_kabsp / (m_e * omega_pe**2 * coulomb_log * Gamma_Te**3)  * (c/omega)
+    prefac =  8*np.pi**2 * Gamma * inv_kabsp / (m_e * omega_pe**2 * coulomb_log * Gamma_Te**3)  * (c/omega)
 
     return prefac.T
 
@@ -593,15 +593,19 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
                     for t, theta_val in enumerate(theta_grid_j_h):
-                        D_rf_lj_wh[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                                Edens_lj_h[t, :,:], Te_ref, \
-                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
-                        
-                        D_rf_lj_hh[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_lj_h[t, :,:], Te_ref, \
-                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                        if Edens_lj_h[t].max() > 0: # Only calculate if there is a beam present
+                            D_rf_lj_wh[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
+                                    Edens_lj_h[t, :,:], Te_ref, \
+                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                            
+                            D_rf_lj_hh[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                    Edens_lj_h[t, :,:], Te_ref, \
+                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                        else:
+                            D_rf_lj_wh[t, :, n_idx] = np.zeros_like(p_norm_w)
+                            D_rf_lj_hh[t, :, n_idx] = np.zeros_like(p_norm_h)
             
                     # With the calculated values for all [t] at given psi, ksi_O,
                     # we can now calculate the bounce integrals
@@ -727,16 +731,20 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
                     for t, theta_val in enumerate(theta_grid_j_h):
+                        if Edens_interp_lj_h[t].max() > 0: # Only calculate if there is a beam present
 
-                        D_rf_lj_wh[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_h[t, :, :], Te_ref, \
-                                    P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                            D_rf_lj_wh[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
+                                    Edens_interp_lj_h[t, :, :], Te_ref, \
+                                        P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
 
-                        D_rf_lj_hh[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_h[t, :, :], Te_ref, \
-                                    P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                            D_rf_lj_hh[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                    Edens_interp_lj_h[t, :, :], Te_ref, \
+                                        P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                        else:
+                            D_rf_lj_wh[t, :, n_idx] = np.zeros_like(p_norm_w)
+                            D_rf_lj_hh[t, :, n_idx] = np.zeros_like(p_norm_h)
                         
                     # With the calculated values for all [t] at given psi, ksi_O,
                     # we can now calculate the bounce integrals
@@ -843,10 +851,13 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
                     for t, theta_val in enumerate(theta_grid_j_w):
-                        D_rf_lj_hw[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_lj_w[t,:,:], Te_ref, \
-                                    P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                        if Edens_lj_w[t].max() > 0: # Only calculate if there is a beam present
+                            D_rf_lj_hw[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                    Edens_lj_w[t,:,:], Te_ref, \
+                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                        else:
+                            D_rf_lj_hw[t, :, n_idx] = np.zeros_like(p_norm_h)
 
                     # With the calculated values for all [t] at given psi, ksi_O,
                     # we can now calculate the bounce integrals
@@ -942,11 +953,14 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
                 for n_idx, harm in enumerate(n):
                     # Split over the harmonics here because it will be important for the final quantities
                     for t, theta_val in enumerate(theta_grid_j_w):
+                        if Edens_interp_lj_w[t].max() > 0: # Only calculate if there is a beam present
 
-                        D_rf_lj_hw[t, :, n_idx] = \
-                            D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
-                                Edens_interp_lj_w[t, :, :], Te_ref, \
-                                    P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
+                            D_rf_lj_hw[t, :, n_idx] = \
+                                D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
+                                    Edens_interp_lj_w[t, :, :], Te_ref, \
+                                        P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
+                        else:
+                            D_rf_lj_hw[t, :, n_idx] = np.zeros_like(p_norm_h)
                         
                     # With the calculated values for all [t] at given psi, ksi_O,
                     # we can now calculate the bounce integrals
@@ -984,9 +998,12 @@ if __name__ == '__main__':
     #------------------------------#
 
     # WKBeam results, binned in appropriate dimensions
-    #filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/WKBacca_cases/TCV74302/Output_theta_invertedsign/L1_binned_QL_test.hdf5'
+    # TCV74302 case
+    #filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV74302/output/L1_binned_QL.hdf5'
     #filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
     #outputname = 'QL_bounce_TCV74302_test.h5'
+    
+    #TCV72644 case
     filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/No_fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
     outputname = 'QL_bounce_TCV72644_1.25_test.h5'
@@ -1041,16 +1058,21 @@ if __name__ == '__main__':
             for t, theta_val in enumerate(theta):
                 ptV[l, t] = 2*np.pi * 1e-6 * d_psi[l] * d_theta * Eq.volume_element_J(theta_val, psi_val)
                 R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
+
+        # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c* 1/2piR * 1/(dV * dV_N)
         Edens =  Wfct[:,:,:,:,0] /ptV[:,:, None, None] 
-        Edens /= 2*np.pi*(R[:,:, None, None]/100) # Average over the toroidal angle
+        Edens /= 2*np.pi # Average over the toroidal angle
         Edens /= dV_N[None, None, None, :]
-        Edens /= 2*np.pi*Nperp[None, None, None, :] # Average over the refractive index perpendicular angle
-        Edens *= 4*np.pi /c * 1e6 # Gives average energy density in J/m^3/[N-volume], on psi, theta, N_par, N_perp grid!
+        Edens *= 4*np.pi /c * 1e6 
+        # With this, Edens is the toroidally averaged energy density in J/m^3/N_volume, integrated over the refractive index angle
+
         if plot_option:
             plt.figure()
             ax = plt.subplot(111)
-            beam= ax.contourf(R, Z, np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)), levels=50)
-            absorb = ax.contour(R, Z, np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*dV_N[None, None, None, :], axis=(2, 3)), levels=10, cmap='hot')
+            Edens_2D_tor_avg = np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)) # Integrated over N_par, N_perp 
+            Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*dV_N[None, None, None, :]/(2*np.pi*(R[:,:, None, None]/100)), axis=(2, 3))
+            beam= ax.contourf(R, Z, Edens_2D_tor_avg, levels=50)
+            absorb = ax.contour(R, Z, Absorption_2D_tor_avg, levels=10, cmap='hot')
             flux_surf = ax.contour(R, Z, np.tile(rho, (len(theta), 1)).T, levels=10, colors='black', linestyles='dashed', linewidths=0.5)
             ax.clabel(flux_surf, flux_surf.levels, inline=True, fontsize=10)
             ax.set_aspect('equal')

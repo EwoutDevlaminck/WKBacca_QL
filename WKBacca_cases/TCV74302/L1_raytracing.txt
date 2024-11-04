@@ -69,7 +69,7 @@ rayStartX = 122.9          # central antenna starting point coordinates in cm
 rayStartY = -4.40
 rayStartZ = -0.29
 # antenna oriantation angles in degree
-antennatordeg = 15.996          # Inverse of what we get out of LUKE! For some reason there's a problem with the translation of co/counter current
+antennatordeg = -15.996          
 antennapoldeg = -0.16	 
 anglespecification = 'ASDEX'
 

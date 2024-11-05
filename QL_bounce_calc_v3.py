@@ -11,15 +11,12 @@ from scipy.interpolate import interp1d
 from scipy.interpolate import RegularGridInterpolator
 from scipy.optimize import minimize, fsolve
 
-from numba import jit
 from mpi4py import MPI
 
 from CommonModules.input_data import InputData 
 from CommonModules.PlasmaEquilibrium import TokamakEquilibrium
 import RayTracing.modules.dispersion_matrix_cfunctions as disp
 import CommonModules.physics_constants as phys
-import CommonModules.BiSplineDer as bispl
-
 
 eps = np.finfo(np.float32).eps
 

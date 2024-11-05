@@ -1004,13 +1004,13 @@ if __name__ == '__main__':
     #outputname = 'QL_bounce_TCV74302_test.h5'
     
     #TCV72644 case
-    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/No_fluct/output/L4_binned_QL.hdf5'
+    filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
-    outputname = 'QL_bounce_TCV72644_1.25_test.h5'
+    outputname = 'QL_bounce_TCV72644_1.25_test_fluct.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 40)
-    anglegrid = np.linspace(-np.pi, 0, 70)
+    p_norm = np.linspace(0, 15, 100)
+    anglegrid = np.linspace(-np.pi, 0, 300)
     ksi0 = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 
@@ -1066,6 +1066,7 @@ if __name__ == '__main__':
         Edens *= 4*np.pi /c * 1e6 
         # With this, Edens is the toroidally averaged energy density in J/m^3/N_volume, integrated over the refractive index angle
 
+
         if plot_option:
             plt.figure()
             ax = plt.subplot(111)
@@ -1080,7 +1081,13 @@ if __name__ == '__main__':
             plt.title('Beam in poloidal plane, resolved in rho, theta')
         plt.show()
             
-
+        # TEST, adding a factor V/2R0
+        # Somewhere, a factor quite similar to this (propertional to either psi or the area of a flux surface) is needed
+        Rp = Eq.magn_axis_coord_Rz[0] / 100
+        flux_volumes = np.zeros_like(psi)
+        for l, psi_val in enumerate(psi):
+            flux_volumes[l] = Eq.compute_volume2(psi_val)
+        Edens *= flux_volumes[:, None, None, None]/(2*Rp)
 
         # Calculate the reference quantities needed for the normalisation
         omega = phys.AngularFrequency(FreqGHz)

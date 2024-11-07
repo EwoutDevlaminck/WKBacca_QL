@@ -1079,7 +1079,7 @@ if __name__ == '__main__':
         plt.show()
             
         # TEST, adding a factor V/2R0
-        # Somewhere, a factor quite similar to this (propertional to either psi or the area of a flux surface) is needed
+        # Somewhere, a factor quite similar to this (proportional to either psi or the area of a flux surface) is needed
         Rp = Eq.magn_axis_coord_Rz[0] / 100
         flux_volumes = np.zeros_like(psi)
         for l, psi_val in enumerate(psi):

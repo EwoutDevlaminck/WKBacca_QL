@@ -340,7 +340,7 @@ def bounce_sum(d_theta_grid_j, CB_j, Func, passing, sigma_dep=False):
 #---THIS IS THE MAIN FUNCTION---#
 #-------------------------------#
 
-def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, DKE_calc=False, eps=np.finfo(np.float32).eps):
+def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, DKE_calc=False, eps=np.finfo(np.float32).eps):
 
     """
     The main function to calculate the RF diffusion coefficients.
@@ -348,8 +348,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
 
         psi: np.array [l]
             The radial coordinate 
-        d_psi: np.array [l]
-            The radial coordinate spacing, needed for volume element calculation
         theta: np.array [t]
             The poloidal coordinate
         p_norm_w: np.array [i]
@@ -396,10 +394,6 @@ def D_RF(psi, d_psi, theta, p_norm_w, ksi0_w, npar, nperp, Edens, Eq, Ne_ref, Te
     #---------------------------------#
 
     omega = phys.AngularFrequency(FreqGHz)
-
-    # Calculate the normalised momentum and pitch angle on the half grid
-    p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
-    ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
     
     # Precaution to not have exactly 0 values in the grid for ksi, as this would be
     # infintely trapped particles
@@ -905,16 +899,20 @@ if __name__ == '__main__':
     #TCV72644 case
     filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
-    outputname = 'QL_bounce_TCV72644_1.25_test_fluct_doubletest.h5'
+    outputname = 'QL_bounce_TCV72644_1.25_fluct.h5'
 
     # Momentum grids
-    p_norm = np.linspace(0, 15, 10)
-    anglegrid = np.linspace(-np.pi, 0, 30)
-    ksi0 = np.cos(anglegrid)
+    p_norm_w = np.linspace(0, 15, 100)
+    anglegrid = np.linspace(-np.pi, 0, 300)
+    ksi0_w = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 
+    # Calculate the normalised momentum and pitch angle on the half grid
+    p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
+    ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
+
     #Harmonics to take into account
-    harmonics = [2]
+    harmonics = np.array([2])
 
     plot_option = 1
 
@@ -1001,16 +999,16 @@ if __name__ == '__main__':
         Te_ref = np.amax(ptTe)
 
         # Variables to hold results
-        DRF0_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
-        DRF0_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
-        DRF0_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1, len(harmonics)))
+        DRF0_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(harmonics)))
+        DRF0_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(harmonics)))
+        DRF0_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h), len(harmonics)))
         if DKE_calc:
-            DRF0D_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
-            DRF0D_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
-            DRF0D_hh = np.zeros((len(psi), len(p_norm)-1, len(ksi0)-1, len(harmonics)))
+            DRF0D_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(harmonics)))
+            DRF0D_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(harmonics)))
+            DRF0D_hh = np.zeros((len(psi), len(p_norm_h), len(ksi0_h), len(harmonics)))
 
-            DRF0F_wh = np.zeros((len(psi), len(p_norm), len(ksi0)-1, len(harmonics)))
-            DRF0F_hw = np.zeros((len(psi), len(p_norm)-1, len(ksi0), len(harmonics)))
+            DRF0F_wh = np.zeros((len(psi), len(p_norm_w), len(ksi0_h), len(harmonics)))
+            DRF0F_hw = np.zeros((len(psi), len(p_norm_h), len(ksi0_w), len(harmonics)))
         else:
             DRF0D_wh = np.zeros_like(psi)
             DRF0D_hw = np.zeros_like(psi)
@@ -1023,7 +1021,7 @@ if __name__ == '__main__':
         Trapksi0_h = np.zeros(len(psi))
         Trapksi0_w = np.zeros(len(psi))
 
-        task_queue = [(i, psi_val, d_psi[i], Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
+        task_queue = [(i, psi_val, Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
 
         # Sort task queue by descending psi values
         # Higher psi values have more trapped particles, which are more expensive to calculate
@@ -1045,8 +1043,10 @@ if __name__ == '__main__':
     mode = comm.bcast(mode, root=0)
     FreqGHz = comm.bcast(FreqGHz, root=0)
     theta = comm.bcast(theta, root=0)
-    p_norm = comm.bcast(p_norm, root=0)
-    ksi0 = comm.bcast(ksi0, root=0)
+    p_norm_w = comm.bcast(p_norm_w, root=0)
+    p_norm_h = comm.bcast(p_norm_h, root=0)
+    ksi0_w = comm.bcast(ksi0_w, root=0)
+    ksi0_h = comm.bcast(ksi0_h, root=0)
     Npar = comm.bcast(Npar, root=0)
     Nperp = comm.bcast(Nperp, root=0)
     Eq = comm.bcast(Eq, root=0)
@@ -1099,7 +1099,7 @@ if __name__ == '__main__':
             if task is None:
                 break
 
-            idx, psi_value, d_psi_value, Edens_slice = task
+            idx, psi_value, Edens_slice = task
 
             #Expand dimension of Wfct to have len=1 in the first dimension
             Edens_slice = np.expand_dims(Edens_slice, axis=0)
@@ -1107,7 +1107,7 @@ if __name__ == '__main__':
             # Perform the calculation
             DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
             DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc, Trapksi0_h_loc, Trapksi0_w_loc = \
-            D_RF([psi_value], [d_psi_value], theta, p_norm, ksi0, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
+            D_RF([psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
 
             result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
                         DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0], Trapksi0_h_loc, Trapksi0_w_loc)
@@ -1124,42 +1124,114 @@ if __name__ == '__main__':
             #--------------------------------#
             #---Efficient data storage-------#
             #--------------------------------#
-            outputname = outputname.split('.')[0] + '_sparse.h5'
+            outputname = '.'.join(outputname.split('.')[:-1]) + '_sparse.h5'
             # Save the data
             with h5py.File(outputname, 'w') as file:
                 file.create_dataset('harmonics', data=harmonics)
                 file.create_dataset('psi', data=psi)
+                file.create_dataset('ksi0_w', data=ksi0_w)
+                file.create_dataset('ksi0_h', data=ksi0_h)
+                file.create_dataset('p_norm_w', data=p_norm_w)
+                file.create_dataset('p_norm_h', data=p_norm_h)
                 file.create_dataset('FreqGHz', data=FreqGHz)
                 file.create_dataset('mode', data=mode)
                 file.create_dataset('Trapksi0_h', data=Trapksi0_h)
                 file.create_dataset('Trapksi0_w', data=Trapksi0_w)
-                # Continue, implement masks and so on
 
+                # Create masks in psi, ksi0, p_norm and harmonic
+                mask_DRF0_wh = np.where(DRF0_wh.flatten() > 1e-5)
+                DRF0_wh_sparse = DRF0_wh.flatten()[mask_DRF0_wh]
+
+                mask_DRF0_hw = np.where(DRF0_hw.flatten() > 1e-5)
+                DRF0_hw_sparse = DRF0_hw.flatten()[mask_DRF0_hw]
+
+                mask_DRF0_hh = np.where(DRF0_hh.flatten() > 1e-5)
+                DRF0_hh_sparse = DRF0_hh.flatten()[mask_DRF0_hh]
+
+
+                if DKE_calc:
+                    mask_DRF0D_wh = np.where(DRF0D_wh.flatten() > 1e-5)
+                    DRF0D_wh_sparse = DRF0D_wh.flatten()[mask_DRF0D_wh]
+
+                    mask_DRF0D_hw = np.where(DRF0D_hw.flatten() > 1e-5)
+                    DRF0D_hw_sparse = DRF0D_hw.flatten()[mask_DRF0D_hw]
+
+                    mask_DRF0D_hh = np.where(DRF0D_hh.flatten() > 1e-5)
+                    DRF0D_hh_sparse = DRF0D_hh.flatten()[mask_DRF0D_hh]
+
+                    mask_DRF0F_wh = np.where(DRF0F_wh.flatten() > 1e-5)
+                    DRF0F_wh_sparse = DRF0F_wh.flatten()[mask_DRF0F_wh]
+
+                    mask_DRF0F_hw = np.where(DRF0F_hw.flatten() > 1e-5)
+                    DRF0F_hw_sparse = DRF0F_hw.flatten()[mask_DRF0F_hw]
+
+                else:
+                    mask_DRF0D_wh = np.zeros(1)
+                    DRF0D_wh_sparse = np.zeros(1)
+                    mask_DRF0D_hw = np.zeros(1)
+                    DRF0D_hw_sparse = np.zeros(1)
+                    mask_DRF0D_hh = np.zeros(1)
+                    DRF0D_hh_sparse = np.zeros(1)
+                    mask_DRF0F_wh = np.zeros(1)
+                    DRF0F_wh_sparse = np.zeros(1)
+                    mask_DRF0F_hw = np.zeros(1)
+                    DRF0F_hw_sparse = np.zeros(1)
+
+
+                # save the data
+                file.create_dataset('DRF0_wh', data=DRF0_wh_sparse)
+                file.create_dataset('mask_DRF0_wh', data=mask_DRF0_wh)
+                file.create_dataset('DRF0_hw', data=DRF0_hw_sparse)
+                file.create_dataset('mask_DRF0_hw', data=mask_DRF0_hw)
+                file.create_dataset('DRF0_hh', data=DRF0_hh_sparse)
+                file.create_dataset('mask_DRF0_hh', data=mask_DRF0_hh)
+
+                file.create_dataset('DRF0D_wh', data=DRF0D_wh_sparse)
+                file.create_dataset('mask_DRF0D_wh', data=mask_DRF0D_wh)
+                file.create_dataset('DRF0D_hw', data=DRF0D_hw_sparse)
+                file.create_dataset('mask_DRF0D_hw', data=mask_DRF0D_hw)
+                file.create_dataset('DRF0D_hh', data=DRF0D_hh_sparse)
+                file.create_dataset('mask_DRF0D_hh', data=mask_DRF0D_hh)
+
+                file.create_dataset('DRF0F_wh', data=DRF0F_wh_sparse)
+                file.create_dataset('mask_DRF0F_wh', data=mask_DRF0F_wh)
+                file.create_dataset('DRF0F_hw', data=DRF0F_hw_sparse)
+                file.create_dataset('mask_DRF0F_hw', data=mask_DRF0F_hw)
+
+            file.close()
 
         else:
 
+            
             # Save the data
             with h5py.File(outputname, 'w') as file:
                 file.create_dataset('harmonics', data=harmonics)
                 file.create_dataset('psi', data=psi)
                 file.create_dataset('theta', data=theta)
-                file.create_dataset('ksi0', data=ksi0)
-                file.create_dataset('p_norm', data=p_norm)
+                file.create_dataset('ksi0_w', data=ksi0_w)
+                file.create_dataset('ksi0_h', data=ksi0_h)
+                file.create_dataset('p_norm_w', data=p_norm_w)
+                file.create_dataset('p_norm_h', data=p_norm_h)
                 file.create_dataset('FreqGHz', data=FreqGHz)
                 file.create_dataset('mode', data=mode)
-                file.create_dataset('DRF0_wh', data=DRF0_wh)
-                file.create_dataset('DRF0D_wh', data=DRF0D_wh)
-                file.create_dataset('DRF0F_wh', data=DRF0F_wh)
-                file.create_dataset('DRF0_hw', data=DRF0_hw)
-                file.create_dataset('DRF0D_hw', data=DRF0D_hw)
-                file.create_dataset('DRF0F_hw', data=DRF0F_hw)
-                file.create_dataset('DRF0_hh', data=DRF0_hh)
-                file.create_dataset('DRF0D_hh', data=DRF0D_hh)
                 file.create_dataset('Trapksi0_h', data=Trapksi0_h)
                 file.create_dataset('Trapksi0_w', data=Trapksi0_w)
 
+                file.create_dataset('DRF0_wh', data=DRF0_wh)
+                file.create_dataset('DRF0_hw', data=DRF0_hw)
+                file.create_dataset('DRF0_hh', data=DRF0_hh)
+
+                file.create_dataset('DRF0D_wh', data=DRF0D_wh)
+                file.create_dataset('DRF0D_hw', data=DRF0D_hw)
+                file.create_dataset('DRF0D_hh', data=DRF0D_hh)
+
+                file.create_dataset('DRF0F_wh', data=DRF0F_wh)
+                file.create_dataset('DRF0F_hw', data=DRF0F_hw)
+    
+                file.close()
+
         if plot_option:
-            Pw, Kh = np.meshgrid(p_norm, ksi0[:-1])
+            Pw, Kh = np.meshgrid(p_norm_w, ksi0_h)
 
             PP, PPer = Pw * Kh, Pw * np.sqrt(1 - Kh**2)
 

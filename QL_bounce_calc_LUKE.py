@@ -899,20 +899,29 @@ if __name__ == '__main__':
     #TCV72644 case
     filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
     filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
-    outputname = 'QL_bounce_TCV72644_1.25_fluct.h5'
+    outputname = 'QL_bounce_TCV72644_1.25_fluct_LUKE_F.h5'
 
     # Momentum grids
-    p_norm_w = np.linspace(0, 15, 100)
-    anglegrid = np.linspace(-np.pi, 0, 300)
-    ksi0_w = np.cos(anglegrid)
+    #p_norm_w = np.linspace(0, 15, 10)
+    #anglegrid = np.linspace(-np.pi, 0, 30)
+    #ksi0_w = np.cos(anglegrid)
     #ksi0 = np.linspace(-1, 1, 100)
 
     # Calculate the normalised momentum and pitch angle on the half grid
-    p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
-    ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
+    #p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
+    #ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
+
+    # TRIAL CASE
+    from scipy.io import loadmat
+    grid_file = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKbacca_grids.mat'
+    grids = loadmat(grid_file)['WKbacca_grids']
+    ksi0_h = grids['ksi0_h'][0,0][0]
+    ksi0_w = grids['ksi0_w'][0,0][0]
+    p_norm_h = grids['p_norm_h'][0,0][0]
+    p_norm_w = grids['p_norm_w'][0,0][0]
 
     #Harmonics to take into account
-    harmonics = np.array([2])
+    harmonics = np.array([2, 3])
 
     plot_option = 1
 
@@ -933,7 +942,7 @@ if __name__ == '__main__':
     # Initialize shared data
     if rank == 0:
         # Initialize variables, load data, and pre-process as needed
-        WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
+        WhatToResolve, FreqGHz, mode, Wfct, Absorption, _, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
 
 
 
@@ -1120,6 +1129,19 @@ if __name__ == '__main__':
         toc = time.time()
         print(f'\rTime taken: {toc-tic:.2f} s', flush=True)
 
+        # Transpose the arrays to have [np, nksi, npsi, nharmonics] as used in LUKE
+        DRF0_wh = np.transpose(DRF0_wh, (1, 2, 0, 3))
+        DRF0_hw = np.transpose(DRF0_hw, (1, 2, 0, 3))
+        DRF0_hh = np.transpose(DRF0_hh, (1, 2, 0, 3))
+        
+        if DKE_calc:
+            DRF0D_wh = np.transpose(DRF0D_wh, (1, 2, 0, 3))
+            DRF0D_hw = np.transpose(DRF0D_hw, (1, 2, 0, 3))
+            DRF0D_hh = np.transpose(DRF0D_hh, (1, 2, 0, 3))
+
+            DRF0F_wh = np.transpose(DRF0F_wh, (1, 2, 0, 3))
+            DRF0F_hw = np.transpose(DRF0F_hw, (1, 2, 0, 3))
+
         if sparse_option:
             #--------------------------------#
             #---Efficient data storage-------#
@@ -1138,32 +1160,34 @@ if __name__ == '__main__':
                 file.create_dataset('Trapksi0_h', data=Trapksi0_h)
                 file.create_dataset('Trapksi0_w', data=Trapksi0_w)
 
-                # Create masks in psi, ksi0, p_norm and harmonic
-                mask_DRF0_wh = np.where(DRF0_wh.flatten() > 1e-5)
-                DRF0_wh_sparse = DRF0_wh.flatten()[mask_DRF0_wh]
+                # Create sparse matrices for the bounce integrals
+                # And accompanying masks, all ordered in the fortran style
+                # This, because reshaping and ordering in matlab is done according to the fortran convention of row-first ordering
+                mask_DRF0_wh = np.where(DRF0_wh.flatten(order='F') > 1e-5)
+                DRF0_wh_sparse = DRF0_wh.flatten(order='F')[mask_DRF0_wh]
 
-                mask_DRF0_hw = np.where(DRF0_hw.flatten() > 1e-5)
-                DRF0_hw_sparse = DRF0_hw.flatten()[mask_DRF0_hw]
+                mask_DRF0_hw = np.where(DRF0_hw.flatten(order='F') > 1e-5)
+                DRF0_hw_sparse = DRF0_hw.flatten(order='F')[mask_DRF0_hw]
 
-                mask_DRF0_hh = np.where(DRF0_hh.flatten() > 1e-5)
-                DRF0_hh_sparse = DRF0_hh.flatten()[mask_DRF0_hh]
+                mask_DRF0_hh = np.where(DRF0_hh.flatten(order='F') > 1e-5)
+                DRF0_hh_sparse = DRF0_hh.flatten(order='F')[mask_DRF0_hh]
 
 
                 if DKE_calc:
-                    mask_DRF0D_wh = np.where(DRF0D_wh.flatten() > 1e-5)
-                    DRF0D_wh_sparse = DRF0D_wh.flatten()[mask_DRF0D_wh]
+                    mask_DRF0D_wh = np.where(DRF0D_wh.flatten(order='F') > 1e-5)
+                    DRF0D_wh_sparse = DRF0D_wh.flatten(order='F')[mask_DRF0D_wh]
 
-                    mask_DRF0D_hw = np.where(DRF0D_hw.flatten() > 1e-5)
-                    DRF0D_hw_sparse = DRF0D_hw.flatten()[mask_DRF0D_hw]
+                    mask_DRF0D_hw = np.where(DRF0D_hw.flatten(order='F') > 1e-5)
+                    DRF0D_hw_sparse = DRF0D_hw.flatten(order='F')[mask_DRF0D_hw]
 
-                    mask_DRF0D_hh = np.where(DRF0D_hh.flatten() > 1e-5)
-                    DRF0D_hh_sparse = DRF0D_hh.flatten()[mask_DRF0D_hh]
+                    mask_DRF0D_hh = np.where(DRF0D_hh.flatten(order='F') > 1e-5)
+                    DRF0D_hh_sparse = DRF0D_hh.flatten(order='F')[mask_DRF0D_hh]
 
-                    mask_DRF0F_wh = np.where(DRF0F_wh.flatten() > 1e-5)
-                    DRF0F_wh_sparse = DRF0F_wh.flatten()[mask_DRF0F_wh]
+                    mask_DRF0F_wh = np.where(DRF0F_wh.flatten(order='F') > 1e-5)
+                    DRF0F_wh_sparse = DRF0F_wh.flatten(order='F')[mask_DRF0F_wh]
 
-                    mask_DRF0F_hw = np.where(DRF0F_hw.flatten() > 1e-5)
-                    DRF0F_hw_sparse = DRF0F_hw.flatten()[mask_DRF0F_hw]
+                    mask_DRF0F_hw = np.where(DRF0F_hw.flatten(order='F') > 1e-5)
+                    DRF0F_hw_sparse = DRF0F_hw.flatten(order='F')[mask_DRF0F_hw]
 
                 else:
                     mask_DRF0D_wh = np.zeros(1)
@@ -1179,23 +1203,23 @@ if __name__ == '__main__':
 
 
                 # save the data
-                file.create_dataset('DRF0_wh', data=DRF0_wh_sparse)
+                file.create_dataset('DRF0_wh_sparse', data=DRF0_wh_sparse)
                 file.create_dataset('mask_DRF0_wh', data=mask_DRF0_wh)
-                file.create_dataset('DRF0_hw', data=DRF0_hw_sparse)
+                file.create_dataset('DRF0_hw_sparse', data=DRF0_hw_sparse)
                 file.create_dataset('mask_DRF0_hw', data=mask_DRF0_hw)
-                file.create_dataset('DRF0_hh', data=DRF0_hh_sparse)
+                file.create_dataset('DRF0_hh_sparse', data=DRF0_hh_sparse)
                 file.create_dataset('mask_DRF0_hh', data=mask_DRF0_hh)
 
-                file.create_dataset('DRF0D_wh', data=DRF0D_wh_sparse)
+                file.create_dataset('DRF0D_wh_sparse', data=DRF0D_wh_sparse)
                 file.create_dataset('mask_DRF0D_wh', data=mask_DRF0D_wh)
-                file.create_dataset('DRF0D_hw', data=DRF0D_hw_sparse)
+                file.create_dataset('DRF0D_hw_sparse', data=DRF0D_hw_sparse)
                 file.create_dataset('mask_DRF0D_hw', data=mask_DRF0D_hw)
-                file.create_dataset('DRF0D_hh', data=DRF0D_hh_sparse)
+                file.create_dataset('DRF0D_hh_sparse', data=DRF0D_hh_sparse)
                 file.create_dataset('mask_DRF0D_hh', data=mask_DRF0D_hh)
 
-                file.create_dataset('DRF0F_wh', data=DRF0F_wh_sparse)
+                file.create_dataset('DRF0F_wh_sparse', data=DRF0F_wh_sparse)
                 file.create_dataset('mask_DRF0F_wh', data=mask_DRF0F_wh)
-                file.create_dataset('DRF0F_hw', data=DRF0F_hw_sparse)
+                file.create_dataset('DRF0F_hw_sparse', data=DRF0F_hw_sparse)
                 file.create_dataset('mask_DRF0F_hw', data=mask_DRF0F_hw)
 
             file.close()
@@ -1240,12 +1264,12 @@ if __name__ == '__main__':
             maxDrf = np.amax(DRF0_wh)
 
             for i, ax in enumerate(axs.flatten()):
-                ax.pcolormesh(PP, PPer, np.sum(DRF0_wh[2*i], axis=-1).T, cmap='plasma', vmax=maxDrf)
+                ax.pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:, 2*i], axis=-1).T, cmap='plasma', vmax=maxDrf)
                 ax.set_title(f'psi = {rho[2*i]**2:.2f}')
                 ax.set_xlabel(r'$p\{||}$')
                 ax.set_ylabel(r'$p_{\perp}$')
                 ax.set_aspect('equal')
-            plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, np.sum(DRF0_wh[0], axis=-1).T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')
+            plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:,0], axis=-1).T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')
             plt.show()
 
 

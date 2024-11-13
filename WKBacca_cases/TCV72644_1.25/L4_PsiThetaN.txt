@@ -39,8 +39,8 @@ outputfilename = ['L4_binned_QL']
 WhatToResolve = ['rho', 'Theta', 'Nparallel', 'Nperp']
 
 # here, you can choose the lower and upper boundaries:
-min = [0.0001, -3.14159, .2, 0.45]
-max = [0.75, 3.14159, 0.6, 0.85]
+min = [0.05, -3.14159, .2, 0.45]
+max = [1., 3.14159, 0.6, 0.85]
 
 # and the number of bins
 nmbr = [40, 200, 100, 100]
@@ -62,7 +62,7 @@ InputPower = 0.545 #MW
 storeWfct = True
 
 # choose, if also velocity components shall be stored 
-storeVelocityField = True
+storeVelocityField = False
 
 # in the next line, you can choose the velocity field components you want to 
 # store in the list defined.

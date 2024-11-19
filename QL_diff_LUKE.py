@@ -51,21 +51,31 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/Cases_ran_before/TCV72644_1.25/Fluct/output/L4_binned_QL.hdf5'
-filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/L4_raytracing.txt'
-outputname = 'QL_bounce_TCV72644_1.25_fluct_LUKE_F_attempt.h5'
+filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_QL.hdf5'
+filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
+outputname = 'QL_bounce_TCV74302_1.0_nofluct_LUKE_F.h5'
 
 grid_file = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/input/WKbacca_grids.mat'
 
 # IMPORT FROM LUKE
-grids = loadmat(grid_file)['WKbacca_grids']
-ksi0_h = grids['ksi0_h'][0,0][0]
-ksi0_w = grids['ksi0_w'][0,0][0]
-p_norm_h = grids['p_norm_h'][0,0][0]
-p_norm_w = grids['p_norm_w'][0,0][0]
+#grids = loadmat(grid_file)['WKbacca_grids']
+#ksi0_h = grids['ksi0_h'][0,0][0]
+#ksi0_w = grids['ksi0_w'][0,0][0]
+#p_norm_h = grids['p_norm_h'][0,0][0]
+#p_norm_w = grids['p_norm_w'][0,0][0]
+
+#... OR SET UP MANUALLY
+# Momentum grids
+p_norm_w = np.linspace(0, 15, 30)
+anglegrid = np.linspace(-np.pi, 0, 100)
+ksi0_w = np.cos(anglegrid)
+
+# Calculate the normalised momentum and pitch angle on the half grid
+p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
+ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 
 #Harmonics to take into account
-harmonics = np.array([2, 3])
+harmonics = np.array([2])
 
 plot_option = 1
 

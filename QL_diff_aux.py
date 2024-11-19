@@ -592,6 +592,10 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
                 # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
 
                 theta_grid_j_h = 0.5 * (theta_aux[1:] + theta_aux[:-1])
+                if theta_grid_j_h[-1] > theta[-1]:
+                    theta_grid_j_h[-1] = theta[-1]
+                if theta_grid_j_h[0] < theta[0]:
+                    theta_grid_j_h[0] = theta[0]
                 d_theta_grid_j_h = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
 
                 # From here, most is the same as the passing case, but we have to interpolate the Wfct
@@ -787,6 +791,10 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
                 # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
 
                 theta_grid_j_w = 0.5 * (theta_aux[1:] + theta_aux[:-1])
+                if theta_grid_j_w[-1] > theta[-1]:
+                    theta_grid_j_w[-1] = theta[-1]
+                if theta_grid_j_w[0] < theta[0]:
+                    theta_grid_j_w[0] = theta[0]
                 d_theta_grid_j_w = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
 
                 # From here, most is the same as the passing case, but we have to interpolate the Wfct

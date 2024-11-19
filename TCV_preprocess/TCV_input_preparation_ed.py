@@ -29,7 +29,8 @@ import scipy.signal as signal
 import scipy.interpolate as spl
 import tkinter as tk
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+#from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# Disabled for now, spcsrv26 doesn't allow this.
 
 from BiSplineDer import BiSpline, UniBiSpline
 # This is needed for the extrapolation to a 2D grid of these profiles.
@@ -279,7 +280,10 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 
         # Check iteratively where a good boundary for the plasma is, i.e. where we have not yet encountered an x point
         # Otherwise we could have articafs of density outside the plasma
-        psi_forced_edge = interactive_boundary_setting(rz_R, rz_Z, rz_psi, psi_antenna)
+        #psi_forced_edge = interactive_boundary_setting(rz_R, rz_Z, rz_psi, psi_antenna)
+
+        # Bypass for spcsrv26, where the interactive plotting is not working at the moment
+        psi_forced_edge = 1.1
         print(f'Forced edge value set to {psi_forced_edge:.2f}')
 
         # Now force the psi field to a constant value outside this edge, as then we can be sure the density is zero there
@@ -628,8 +632,8 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 """----------------------------------"""
 
 if __name__ == '__main__':
-    filename = r"/home/devlamin/Documents/WKBeam_related/WKBacca_QL/TCV_preprocess/72644_1.25/For_WKBeam_with_scrapeoff/EQUIL_TCV_72644_1.2500.mat"
-    antenna_location = [122.82, -0.30] #In cm, position of the antenna in R, Z
+    filename = r"/home/devlamin/WKBacca_QL/TCV_preprocess/74301/For_WKBeam_with_scrapeoff/EQUIL_TCV_74301_1.2000.mat"
+    antenna_location = [122.90, -0.31] #In cm, position of the antenna in R, Z
     # For L1/L4 usually around 122, 0. For L2/L5 around 122, 50.5.
     # This is basically to check if the density goes to zero at the antenna location
     TCV_input_prep_ed(filename, plot_option=1, correct_psi_option=1, antenna_loc=antenna_location)

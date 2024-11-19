@@ -11,7 +11,6 @@ from scipy.interpolate import interp1d
 from scipy.interpolate import RegularGridInterpolator
 from scipy.optimize import minimize, fsolve
 
-from mpi4py import MPI
 
 from CommonModules.input_data import InputData 
 from CommonModules.PlasmaEquilibrium import TokamakEquilibrium
@@ -891,7 +890,8 @@ if __name__ == '__main__':
     import sys
     import os
     import time
-
+    from mpi4py import MPI
+    
     tic = time.time()
 
     #------------------------------#

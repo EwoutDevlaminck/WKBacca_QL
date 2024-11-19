@@ -1,19 +1,13 @@
 from scipy.io import loadmat
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import scipy.signal as signal
-import scipy.interpolate as spl
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import tkinter as tk
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 #----------------------------#
 #---Load the data------------#
 #----------------------------#
 
-file_loc = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/TCV_preprocess/72644_1.25/For_WKBeam_with_scrapeoff/ECparams_72644_1.25s.mat'
+file_loc = '/home/devlamin/WKBacca_QL/TCV_preprocess/74301/For_WKBeam_with_scrapeoff/ECparams_74301_1.20s.mat'
 
 data = loadmat(file_loc)['beams']
 
@@ -58,7 +52,7 @@ plt.show()
 
 # Calculate average power over time window
 
-t_center = 1.05 # s
+t_center = 1.2 # s
 dt = 0.1 # s
 
 t_start = t_center - dt/2

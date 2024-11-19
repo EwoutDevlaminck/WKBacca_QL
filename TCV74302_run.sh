@@ -6,7 +6,7 @@
 command1="WKBacca_cases/TCV74302/L1_raytracing.txt"
 #command2="WKBacca_cases/TCV74302/L1_raytracing.txt"
 
-mpiexec -np 16 python3 WKBeam.py trace $command1 &
+mpiexec -np 32 python3 WKBeam.py trace $command1 &
 #mpiexec -np 8 python3 WKBeam.py trace $command2 &
 
 wait 

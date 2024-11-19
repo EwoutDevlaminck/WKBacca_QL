@@ -51,11 +51,11 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_QL.hdf5'
-filename_Eq = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
-outputname = 'QL_bounce_TCV74302_1.0_nofluct_LUKE_F.h5'
+filename_WKBeam     = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/output/L1_binned_QL.hdf5'
+filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/L1_raytracing.txt'
+outputname          = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/QL_bounce_TCV74301_1.2_nofluct_LUKE_F.h5'
 
-grid_file = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/input/WKbacca_grids.mat'
+grid_file           = '/home/devlamin/Documents/WKBeam_related/WKBacca_QL/WKBacca_cases/TCV72644_1.25/input/WKbacca_grids.mat'
 
 # IMPORT FROM LUKE
 #grids = loadmat(grid_file)['WKbacca_grids']

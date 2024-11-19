@@ -27,7 +27,6 @@ import matplotlib.pyplot as plt
 import os
 import scipy.signal as signal
 import scipy.interpolate as spl
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import tkinter as tk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg

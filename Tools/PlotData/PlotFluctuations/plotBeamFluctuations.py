@@ -271,7 +271,7 @@ def plot_beam_fluct(inputdata):
     ax1 = fig1.add_subplot(111, aspect='equal')
     # ... fluctuation envelope ...
     if not idata.scattering:
-        reds_map = matplotlib.cm.get_cmap('Reds')
+        reds_map = matplotlib.colormaps.get_cmap('Reds')
         ax1.set_facecolor(reds_map(0.))
     else:
         c1 = ax1.pcolormesh(R1d, Z1d, fluct.T, cmap='Reds', alpha=.9, zorder=0)
@@ -318,11 +318,11 @@ def plot_beam_fluct(inputdata):
         Zlist_beam = np.linspace(Zmin_beam,Zmax_beam,nmbrZ_beam)
         Zgrid_beam, Xgrid_beam = np.meshgrid(Zlist_beam, Xlist_beam)
 
-        ax1.contourf(Xgrid_beam, Zgrid_beam,Wfct[beam][:,:,0],100, vmin=lowerBound, cmap=transMap, zorder=9) 
+        beamfig = ax1.contourf(Xgrid_beam, Zgrid_beam,Wfct[beam][:,:,0],100, vmin=lowerBound, cmap=transMap, zorder=9) 
     
         #Make it so that the colourmap only starts at lowerBound
         displayedMap = plt.cm.ScalarMappable(norm=clrs.Normalize(lowerBound, upperBound), cmap=transMap)  
-        colorbarBeam = plt.colorbar(displayedMap, orientation='vertical', pad=.1, shrink=.7)
+        colorbarBeam = plt.colorbar(beamfig, orientation='vertical', pad=.1, shrink=.7)
         colorbarBeam.set_label(label=f'|E|² (J/m³)\n f={FreqGHz[beam]}GHz', size=10, labelpad=-30, y=1.08, rotation=0)
 
     #Plot the absorption on top of the beam

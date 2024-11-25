@@ -1,6 +1,7 @@
-# Example for TCV 74301 for the QL diffusion development
+# Example for TCV74301 by Ewout Devlaminck
+# Case with no turbulence: zero fluctuation level.
 #
-# Control parameters for processing the angular spectrum
+# Control parameters for processing the electric field amplitude
 # ---
 
 
@@ -11,7 +12,8 @@
 # INPUT AND OUTPUT FILES
 ##########################################################################
 # the ray trace data used to bin
-inputdirectory = 'WKBacca_cases/TCV74301/output/'
+equilibriumdirectory = 'WKBacca_cases/TCV74301/input/'
+inputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_74301/WKBacca_results/Nofluct/output/'
 
 # name of the input file, 
 # will be composed by what is indicated here and formal stuff
@@ -25,7 +27,7 @@ nmbrFiles = 1
 outputdirectory =  'WKBacca_cases/TCV74301/output/'
 
 # output filename. If not defined, inputfilename is used and _binned attached 
-outputfilename = ['L1_binned_QL']
+outputfilename = ['L1_binned_XY']
 ##########################################################################
 
 
@@ -33,17 +35,17 @@ outputfilename = ['L1_binned_QL']
 ##########################################################################
 # IN THIS SECTION, YOU CAN CHOOSE WHICH DIMENSIONS SHALL BE RESOLVED.
 # THE FOLLOWING CAN BE CHOSEN:
-# X, Y, Z, Nx, Ny, Nz, Nparallel, Nperp, phiN, Psi, Theta, rho, R
+# X, Y, Z, Nx, Ny, Nz, Nparallel, phiN, Psi, rho, R
 # THEY WILL BE ARRANGED IN THE ORDER GIVEN HERE.
 
-WhatToResolve = ['rho', 'Theta', 'Nparallel', 'Nperp']
+WhatToResolve = ['R', 'Y']
 
 # here, you can choose the lower and upper boundaries:
-min = [0.05, -3.14159, -0.45, 0.65]
-max = [1, 3.14159, 0.2, 0.95]
+min = [75., -30.]
+max = [125., 30.]
 
 # and the number of bins
-nmbr = [40, 200, 100, 100]
+nmbr = [200, 400]
 ##########################################################################
 
 
@@ -55,7 +57,7 @@ nmbr = [40, 200, 100, 100]
 # such that energy density / flow / power absorption is stored.
 # if it is commented out, the electric field is normalised to 1
 # at the central antenna position
-InputPower = 0.61129 #MW
+InputPower = 0.61129
 
 # put True in the next line if you wish to save the basic 
 # Wfct result (binning weight 1)
@@ -66,8 +68,8 @@ storeVelocityField = False
 
 # in the next line, you can choose the velocity field components you want to 
 # store in the list defined.
-# They can be chosen out of Nx, Ny, Nz, Nparallel, Nperp, phiN, Vx, Vy, Vz
-VelocityComponentsToStore = ['Nparallel', 'Nperp']
+# They can be chosen out of Nx, Ny, Nz, Nparallel, phiN
+VelocityComponentsToStore = ['Nx', 'Nz']
 
 # put True in the following line if you wish to 
 # store absorption
@@ -107,7 +109,6 @@ computeScatteredContribution = False
 # ray tracing code to the physical one
 correctionfactor = True
 
-
 ##########################################################################
 
 
@@ -120,9 +121,29 @@ correctionfactor = True
 #  plotmode = 'evolution of partial densities' 
 #  plotmode = 'poloidal section - tokamaks'
 #  plotmode = 'poloidal section - TORPEX-like'
-plotmode = 'evolution of partial densities'
+plotmode = 'poloidal section - tokamaks'
+
+# Load the physical equilibrium for plotting
+analytical_tokamak = 'Yes'
+
+# Compare profile to TORBEAM
+compare_to_TORBEAM = 'no'
+
+# TORBEAM results directory
+# (Set the path to the directory holding TORBEAM output files
+#  This is only needed when VolumeSource = 'TORBEAM' or when
+#  compare_to_TORBEAM = 'yes')
+# torbeam_dir = '/home/omaj/Codes/WKBeam/TORBEAM_for_StandardITER/'
 
 # select sections to be plotted in details
-###vsections = [105., 95., 85.]
+vsections = [700., 600., 580.]
+hsections = [400., 350., 310.]
+
+# Geometric parameters of the tokamak
+rmaj = 88. # major radius in cm
+rmin = 25. # minor radius in cm
+
+# Mask points with energy density less than this
+mask_threshold = 0.01
 
 ##########################################################################

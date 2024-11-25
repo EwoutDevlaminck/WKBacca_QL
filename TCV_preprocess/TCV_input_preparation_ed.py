@@ -247,7 +247,7 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 
     rz_B_R_coarse = np.array(data['Bx'])
     rz_B_Z_coarse = np.array(data['By'])
-    rz_B_phi_coarse = np.array(data['BPHI'])
+    rz_B_phi_coarse = -np.array(data['BPHI']) # Negative sign added here for the proper convention! What was stored in LUKE uses the opposite sign
 
 
     # We replace NaN values with the average of the adjacent non-NaN values

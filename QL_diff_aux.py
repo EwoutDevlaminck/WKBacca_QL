@@ -196,7 +196,7 @@ def N_par_resonant(inv_kp, p_Te, Gamma, X, harm):
     Calculate the resonant n_par. p_norm and Gamma are of shape (n_p), StixY is a scalar.
     Returns an array of the same shape as p_norm
     """
-    return -(Gamma - harm*X)/p_Te *inv_kp
+    return (Gamma - harm*X)/p_Te *inv_kp
 
 #@jit(nopython=True)
 def polarisation(N2, K_angle, P, R, L, S):

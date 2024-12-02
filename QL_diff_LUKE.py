@@ -20,7 +20,7 @@ from CommonModules.PlasmaEquilibrium import TokamakEquilibrium
 import CommonModules.physics_constants as phys
 
 # WKBacca functions import
-from QL_diff_aux import *
+from QL_diff_aux2 import *
 
 #---------------------------#
 #---Define physics constants---#
@@ -58,23 +58,24 @@ outputname          = '/home/devlamin/WKBacca_QL/QL_bounce_TCV74301_1.0_nofluct_
 grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74301/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
+"""
 grids = loadmat(grid_file)['WKBacca_grids']
 ksi0_h = grids['ksi0_h'][0,0][0]
 ksi0_w = grids['ksi0_w'][0,0][0]
 p_norm_h = grids['p_norm_h'][0,0][0]
 p_norm_w = grids['p_norm_w'][0,0][0]
-
+"""
 #... OR SET UP MANUALLY
 # Momentum grids
-"""
+
 p_norm_w = np.linspace(0, 15, 30)
-anglegrid = np.linspace(-np.pi, 0, 100)
+anglegrid = np.linspace(-np.pi, 0, 30)
 ksi0_w = np.cos(anglegrid)
 
 # Calculate the normalised momentum and pitch angle on the half grid
 p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
 ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
-"""
+
 #Harmonics to take into account
 harmonics = np.array([2])
 
@@ -125,20 +126,20 @@ if rank == 0:
         for t, theta_val in enumerate(theta):
             ptV[l, t] = 2*np.pi * 1e-6 * d_psi[l] * d_theta * Eq.volume_element_J(theta_val, psi_val)
             R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
-
-    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c* 1/2piR * 1/(dV * dV_N)
-    Edens =  Wfct[:,:,:,:,0] /ptV[:,:, None, None] 
+    grid_max = np.amax(ptV/(2*np.pi*1e-2*R))
+    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c /(Delta n_par Delta n_perp)
+    Edens =  Wfct[:,:,:,:,0]
+    Edens *= np.sqrt(ptV[:,:,None, None]/(2*np.pi*1e-2*R[:,:,None, None]))/grid_max # Multiply by sqrt(V/2piR) to get energy density in J/m^3
     Edens /= 2*np.pi # Average over the toroidal angle
-    Edens /= dV_N[None, None, None, :]
+    Edens /= d_npar * d_nperp # Energy per N_par, N_perp
     Edens *= 4*np.pi /c * 1e6 
-    # With this, Edens is the toroidally averaged energy density in J/m^3/N_volume, integrated over the refractive index angle
-
+    # With this, Edens_N is k-space energy density in J/N^2
 
     if plot_option:
         plt.figure()
         ax = plt.subplot(111)
-        Edens_2D_tor_avg = np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)) # Integrated over N_par, N_perp 
-        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*dV_N[None, None, None, :]/(2*np.pi), axis=(2, 3))
+        Edens_2D_tor_avg = np.sum(Edens*d_npar*d_nperp, axis=(2, 3)) # Integrated over N_par, N_perp 
+        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*d_npar*d_nperp, axis=(2, 3))
         beam= ax.contourf(R, Z, Edens_2D_tor_avg, levels=50)
         absorb = ax.contour(R, Z, Absorption_2D_tor_avg, levels=10, cmap='hot')
         flux_surf = ax.contour(R, Z, np.tile(rho, (len(theta), 1)).T, levels=10, colors='black', linestyles='dashed', linewidths=0.5)
@@ -150,11 +151,11 @@ if rank == 0:
         
     # TEST, adding a factor V/2R0
     # Somewhere, a factor quite similar to this (proportional to either psi or the area of a flux surface) is needed
-    Rp = Eq.magn_axis_coord_Rz[0] / 100
-    flux_volumes = np.zeros_like(psi)
-    for l, psi_val in enumerate(psi):
-        flux_volumes[l] = Eq.compute_volume2(psi_val)
-    Edens *= flux_volumes[:, None, None, None]/(2*Rp)
+    #Rp = Eq.magn_axis_coord_Rz[0] / 100
+    #flux_volumes = np.zeros_like(psi)
+    #for l, psi_val in enumerate(psi):
+    #    flux_volumes[l] = Eq.compute_volume2(psi_val)
+    #Edens *= flux_volumes[:, None, None, None]/(2*Rp)
 
     # Calculate the reference quantities needed for the normalisation
     omega = phys.AngularFrequency(FreqGHz)
@@ -185,7 +186,7 @@ if rank == 0:
     Trapksi0_h = np.zeros(len(psi))
     Trapksi0_w = np.zeros(len(psi))
 
-    task_queue = [(i, psi_val, Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
+    task_queue = [(i, psi_val, d_psi[i], Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
 
     # Sort task queue by descending psi values
     # Higher psi values have more trapped particles, which are more expensive to calculate
@@ -263,7 +264,7 @@ else:
         if task is None:
             break
 
-        idx, psi_value, Edens_slice = task
+        idx, psi_value, d_psi_value, Edens_slice = task
 
         #Expand dimension of Wfct to have len=1 in the first dimension
         Edens_slice = np.expand_dims(Edens_slice, axis=0)
@@ -271,7 +272,7 @@ else:
         # Perform the calculation
         DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
         DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc, Trapksi0_h_loc, Trapksi0_w_loc = \
-        D_RF([psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
+        D_RF([psi_value], [d_psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
 
         result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
                     DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0], Trapksi0_h_loc, Trapksi0_w_loc)
@@ -421,7 +422,7 @@ if rank == 0:
         for i, ax in enumerate(axs.flatten()):
             ax.pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:, 2*i], axis=-1).T, cmap='plasma', vmax=maxDrf)
             ax.set_title(f'psi = {rho[2*i]**2:.2f}')
-            ax.set_xlabel(r'$p\{||}$')
+            ax.set_xlabel(r'$p_{||}$')
             ax.set_ylabel(r'$p_{\perp}$')
             ax.set_aspect('equal')
         plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:,0], axis=-1).T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')

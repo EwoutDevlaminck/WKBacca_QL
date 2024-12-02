@@ -64,12 +64,12 @@ InputPower = 0.61129
 storeWfct = True
 
 # choose, if also velocity components shall be stored 
-storeVelocityField = False
+storeVelocityField = True
 
 # in the next line, you can choose the velocity field components you want to 
 # store in the list defined.
 # They can be chosen out of Nx, Ny, Nz, Nparallel, phiN
-VelocityComponentsToStore = ['Nx', 'Nz']
+VelocityComponentsToStore = ['Vx', 'Vz']
 
 # put True in the following line if you wish to 
 # store absorption

@@ -62,7 +62,7 @@ InputPower = 0.61129 #MW
 storeWfct = True
 
 # choose, if also velocity components shall be stored 
-storeVelocityField = False
+storeVelocityField = True
 
 # in the next line, you can choose the velocity field components you want to 
 # store in the list defined.

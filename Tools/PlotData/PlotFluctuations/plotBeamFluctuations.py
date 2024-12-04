@@ -148,30 +148,30 @@ def plot_beam_fluct(inputdata):
 
 
         #Wfct[i] = Wfct[i]/DeltaX/DeltaZ
-        
+        R = np.linspace(Xmin_beam, Xmax_beam, nmbrX_beam) / 100 # m
+        Z = np.linspace(Zmin_beam, Zmax_beam, nmbrZ_beam) / 100 # m
+        ZZ, RR = np.meshgrid(Z, R)
+
+        # Calculate the energy density in a gridcell [J/m³]
+        # E_dens = 4pi/c * BinnedTraces /dV
+
+        Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
+
+        print(f'Total field energy = {np.sum(Wfct[i])}J')
+
+        Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # Devided by toroidal volume element in m³
+
         if Abs_recorded:
-
-            
-            
             P_abs = np.sum(Absorption[i], axis=(0,1))
-
             # And convert to MW/m³ by dividing by the toroidal length
-            R = np.linspace(Xmin_beam, Xmax_beam, nmbrX_beam) / 100 # m
-            Z = np.linspace(Zmin_beam, Zmax_beam, nmbrZ_beam) / 100 # m
-            ZZ, RR = np.meshgrid(Z, R)
-
             Absorption[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
             Absorption[i] /= 2 * np.pi * np.expand_dims(RR, axis=-1) # Averaged over the toroidal angle
-
-            # Calculate the energy density in a gridcell [J/m³]
-            # E_dens = 4pi/c * BinnedTraces /dV
-
-            Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
-
-            print(f'Total field energy = {np.sum(Wfct[i])}J')
-
-            Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # Devided by toroidal volume element in m³
-            Wfct[i] /= 2 * np.pi * np.expand_dims(RR, axis=-1) # Averaged over the toroidal angle
+        
+        if Vel_recorded:
+            # We have to convert to MW/m², I'm not entirely sure how yet...
+            for j in range(Velocity[i].shape[2]):
+  
+                Velocity[i][:,:,j, :] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
 
     
     ##############################################
@@ -296,8 +296,16 @@ def plot_beam_fluct(inputdata):
     #This color matches my slides, cheers ED
     clrs_Ewout = ['#007480', '#413C3A', '#00A79F']
     c_white_trans = clrs.colorConverter.to_rgba('white', alpha=0.5)
-
+    Vel_recorded = False
     for beam in range(len(Wfct)):
+        if Vel_recorded:
+            Quantity = Velocity[beam]
+            #Q = c/100 * Quantity[:,:,0,0]
+            Q = np.sqrt(Quantity[:, :, 0, 0]**2 + Quantity[:, :, 1, 0]**2)
+            #Q = np.where(Wfct[beam][:,:,0]>1e-3, Q/Wfct[beam][:,:,0], 0)
+        else:
+            Quantity = Wfct[beam]
+            Q = Quantity[:,:,0]
 
     #The transmap is such that the lower vlues become increasingly transparent,
     # so we can overlap colormaps. But going all the way to white& transparent is too much
@@ -311,19 +319,22 @@ def plot_beam_fluct(inputdata):
     
         #Set the lower bound to be transparent, so we see the background contourf
         transMap.set_under(color='b', alpha=0.)
-        upperBound = np.amax(Wfct[beam][:, :, 0])
+        upperBound = np.amax(Q)
         lowerBound = upperBound*1e-2 #What's the lowest value we still display?
         
         Xlist_beam = np.linspace(Xmin_beam,Xmax_beam,nmbrX_beam)
         Zlist_beam = np.linspace(Zmin_beam,Zmax_beam,nmbrZ_beam)
         Zgrid_beam, Xgrid_beam = np.meshgrid(Zlist_beam, Xlist_beam)
 
-        beamfig = ax1.contourf(Xgrid_beam, Zgrid_beam,Wfct[beam][:,:,0],100, vmin=lowerBound, cmap=transMap, zorder=9) 
+        beamfig = ax1.contourf(Xgrid_beam, Zgrid_beam, Q ,100, vmin=lowerBound, cmap=transMap, zorder=9) 
     
         #Make it so that the colourmap only starts at lowerBound
         displayedMap = plt.cm.ScalarMappable(norm=clrs.Normalize(lowerBound, upperBound), cmap=transMap)  
         colorbarBeam = plt.colorbar(beamfig, orientation='vertical', pad=.1, shrink=.7)
-        colorbarBeam.set_label(label=f'|E|² (J/m³)\n f={FreqGHz[beam]}GHz', size=10, labelpad=-30, y=1.08, rotation=0)
+        if Vel_recorded:
+            colorbarBeam.set_label(label=r'$|s| (MW/m^2s)$', size=10, labelpad=-30, y=1.08, rotation=0)
+        else:
+            colorbarBeam.set_label(label=f'|E|² (J/m³)\n f={FreqGHz[beam]}GHz', size=10, labelpad=-30, y=1.08, rotation=0)
 
     #Plot the absorption on top of the beam
     if Abs_recorded:

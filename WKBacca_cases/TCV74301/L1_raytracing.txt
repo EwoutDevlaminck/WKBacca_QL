@@ -82,8 +82,8 @@ centraleta2 = 0.
 #############################################################################
 # number of integration steps. The integration can be aborded before due to 
 # absorption or leaving the plasma. See the corresponding parameters below
-npt = 5000                                        				 
-timestep = 0.1	        # timestep for the integration 		 
+npt = 4000                                        				 
+timestep = 0.05	        # timestep for the integration 		 
 epsilonRegS = 1e-8	# regularisation parameter for Hamiltonian 
                         # in case of UH-resonance		  
 integratormaxnmbrsteps = 1500   # max. number of integration steps 
@@ -91,7 +91,7 @@ integratormaxnmbrsteps = 1500   # max. number of integration steps
 integratorreltol = 1e-7         # max. rel. tolerance for solver
 integratorabstol = 1e-7         # max. abs. tolerance for solver
 
-nmbrRays = 20000 ##100                  # number of rays to trace
+nmbrRays = 200 ##100                  # number of rays to trace
 
 
 nmbrMetrHastBoundaryInit = 10000   # number of random numbers generated

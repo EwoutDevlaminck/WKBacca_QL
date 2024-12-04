@@ -18,6 +18,7 @@ from mpi4py import MPI
 from CommonModules.input_data import InputData 
 from CommonModules.PlasmaEquilibrium import TokamakEquilibrium
 import CommonModules.physics_constants as phys
+from Tools.PlotData.PlotAbsorptionProfile.plotabsprofile import compute_deposition_profiles
 
 # WKBacca functions import
 from QL_diff_aux import *
@@ -51,13 +52,16 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/output/L1_binned_QL.hdf5'
-filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/L1_raytracing.txt'
-outputname          = '/home/devlamin/WKBacca_QL/QL_bounce_TCV74301_1.0_nofluct_LUKE_F_sparse.h5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_QL.hdf5'
+filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
+filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_QL/QL_waves_TCV74302_1.2_nofluct_test.h5'
 
-grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74301/WKBacca_grids.mat'
+grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
+
 grids = loadmat(grid_file)['WKBacca_grids']
 ksi0_h = grids['ksi0_h'][0,0][0]
 ksi0_w = grids['ksi0_w'][0,0][0]
@@ -67,8 +71,8 @@ p_norm_w = grids['p_norm_w'][0,0][0]
 #... OR SET UP MANUALLY
 # Momentum grids
 """
-p_norm_w = np.linspace(0, 15, 30)
-anglegrid = np.linspace(-np.pi, 0, 100)
+p_norm_w = np.linspace(0, 15, 10)
+anglegrid = np.linspace(-np.pi, 0, 20)
 ksi0_w = np.cos(anglegrid)
 
 # Calculate the normalised momentum and pitch angle on the half grid
@@ -78,7 +82,7 @@ ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 #Harmonics to take into account
 harmonics = np.array([2])
 
-plot_option = 1
+plot_option = 0
 
 # DKE calculations or not
 DKE_calc = 0
@@ -102,12 +106,9 @@ if rank == 0:
 
 
     psi = rho**2
-
-    # For the calculation, we'll need to have the volume element
-    # Psi is already a half-grid by definition, so we calculate dpsi as such
     d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
     d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
-    #d_psi = [0.37**2-0.35**2]
+
 
     idata = InputData(filename_Eq)
     Eq = TokamakEquilibrium(idata)
@@ -125,20 +126,17 @@ if rank == 0:
         for t, theta_val in enumerate(theta):
             ptV[l, t] = 2*np.pi * 1e-6 * d_psi[l] * d_theta * Eq.volume_element_J(theta_val, psi_val)
             R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
-
-    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c* 1/2piR * 1/(dV * dV_N)
-    Edens =  Wfct[:,:,:,:,0] /ptV[:,:, None, None] 
-    Edens /= 2*np.pi # Average over the toroidal angle
-    Edens /= dV_N[None, None, None, :]
+    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c /(dV_N)
+    Edens =  Wfct[:,:,:,:,0] / np.sum(ptV, axis=1)[:, None, None, None]
+    Edens /= dV_N[None, None, None, :] # Energy density in k-space
     Edens *= 4*np.pi /c * 1e6 
-    # With this, Edens is the toroidally averaged energy density in J/m^3/N_volume, integrated over the refractive index angle
-
+    # With this, Edens_N is k-space energy density in J/N^2
 
     if plot_option:
         plt.figure()
         ax = plt.subplot(111)
         Edens_2D_tor_avg = np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)) # Integrated over N_par, N_perp 
-        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*dV_N[None, None, None, :]/(2*np.pi), axis=(2, 3))
+        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None], axis=(2, 3))
         beam= ax.contourf(R, Z, Edens_2D_tor_avg, levels=50)
         absorb = ax.contour(R, Z, Absorption_2D_tor_avg, levels=10, cmap='hot')
         flux_surf = ax.contour(R, Z, np.tile(rho, (len(theta), 1)).T, levels=10, colors='black', linestyles='dashed', linewidths=0.5)
@@ -148,14 +146,6 @@ if rank == 0:
         plt.title('Beam in poloidal plane, resolved in rho, theta')
     plt.show()
         
-    # TEST, adding a factor V/2R0
-    # Somewhere, a factor quite similar to this (proportional to either psi or the area of a flux surface) is needed
-    Rp = Eq.magn_axis_coord_Rz[0] / 100
-    flux_volumes = np.zeros_like(psi)
-    for l, psi_val in enumerate(psi):
-        flux_volumes[l] = Eq.compute_volume2(psi_val)
-    Edens *= flux_volumes[:, None, None, None]/(2*Rp)
-
     # Calculate the reference quantities needed for the normalisation
     omega = phys.AngularFrequency(FreqGHz)
     _, _, _, _, _, _, ptNe, ptTe, _, _, _, _, _ = config_quantities(psi, theta, omega, Eq)
@@ -315,6 +305,13 @@ if rank == 0:
             file.create_dataset('Trapksi0_h', data=Trapksi0_h)
             file.create_dataset('Trapksi0_w', data=Trapksi0_w)
 
+            # Add absorption data
+            absorption_data = compute_deposition_profiles(InputData(filename_abs), filename_abs_dat)
+            file.create_dataset('rho_abs', data=absorption_data['rho'])
+            file.create_dataset('dP_dV', data=absorption_data['dP_dV'])
+            file.create_dataset('dP_drho', data=absorption_data['dP_drho'])
+            file.create_dataset('dV_drho', data=absorption_data['dV_drho'])
+
             # Create sparse matrices for the bounce integrals
             # And accompanying masks, all ordered in the fortran style
             # This, because reshaping and ordering in matlab is done according to the fortran convention of row-first ordering
@@ -421,7 +418,7 @@ if rank == 0:
         for i, ax in enumerate(axs.flatten()):
             ax.pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:, 2*i], axis=-1).T, cmap='plasma', vmax=maxDrf)
             ax.set_title(f'psi = {rho[2*i]**2:.2f}')
-            ax.set_xlabel(r'$p\{||}$')
+            ax.set_xlabel(r'$p_{||}$')
             ax.set_ylabel(r'$p_{\perp}$')
             ax.set_aspect('equal')
         plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:,0], axis=-1).T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')

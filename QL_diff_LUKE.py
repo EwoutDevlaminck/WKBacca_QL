@@ -18,6 +18,7 @@ from mpi4py import MPI
 from CommonModules.input_data import InputData 
 from CommonModules.PlasmaEquilibrium import TokamakEquilibrium
 import CommonModules.physics_constants as phys
+from Tools.PlotData.PlotAbsorptionProfile.plotabsprofile import compute_deposition_profiles
 
 # WKBacca functions import
 from QL_diff_aux2 import *
@@ -51,31 +52,33 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/output/L1_binned_QL.hdf5'
-filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74301/L1_raytracing.txt'
-outputname          = '/home/devlamin/WKBacca_QL/QL_bounce_TCV74301_1.0_nofluct_LUKE_F_sparse.h5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/L1_binned_QL.hdf5'
+filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
+filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/QL_waves_TCV74302_1.2_nofluct.h5'
 
-grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74301/WKBacca_grids.mat'
+grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
-"""
+
 grids = loadmat(grid_file)['WKBacca_grids']
 ksi0_h = grids['ksi0_h'][0,0][0]
 ksi0_w = grids['ksi0_w'][0,0][0]
 p_norm_h = grids['p_norm_h'][0,0][0]
 p_norm_w = grids['p_norm_w'][0,0][0]
-"""
+
 #... OR SET UP MANUALLY
 # Momentum grids
-
-p_norm_w = np.linspace(0, 15, 30)
-anglegrid = np.linspace(-np.pi, 0, 30)
+"""
+p_norm_w = np.linspace(0, 15, 10)
+anglegrid = np.linspace(-np.pi, 0, 20)
 ksi0_w = np.cos(anglegrid)
 
 # Calculate the normalised momentum and pitch angle on the half grid
 p_norm_h = 0.5 * (p_norm_w[1:] + p_norm_w[:-1])
 ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
-
+"""
 #Harmonics to take into account
 harmonics = np.array([2])
 
@@ -126,20 +129,18 @@ if rank == 0:
         for t, theta_val in enumerate(theta):
             ptV[l, t] = 2*np.pi * 1e-6 * d_psi[l] * d_theta * Eq.volume_element_J(theta_val, psi_val)
             R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
-    grid_max = np.amax(ptV/(2*np.pi*1e-2*R))
-    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c /(Delta n_par Delta n_perp)
-    Edens =  Wfct[:,:,:,:,0]
-    Edens *= np.sqrt(ptV[:,:,None, None]/(2*np.pi*1e-2*R[:,:,None, None]))/grid_max # Multiply by sqrt(V/2piR) to get energy density in J/m^3
-    Edens /= 2*np.pi # Average over the toroidal angle
-    Edens /= d_npar * d_nperp # Energy per N_par, N_perp
+    # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c /(dV_N)
+    Edens =  Wfct[:,:,:,:,0] / np.sum(ptV, axis=1)[:, None, None, None]
+    #Edens /= 2*np.pi # Average over the toroidal angle
+    Edens /= dV_N[None, None, None, :] # Energy density in k-space
     Edens *= 4*np.pi /c * 1e6 
     # With this, Edens_N is k-space energy density in J/N^2
 
     if plot_option:
         plt.figure()
         ax = plt.subplot(111)
-        Edens_2D_tor_avg = np.sum(Edens*d_npar*d_nperp, axis=(2, 3)) # Integrated over N_par, N_perp 
-        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None]*d_npar*d_nperp, axis=(2, 3))
+        Edens_2D_tor_avg = np.sum(Edens*dV_N[None, None, None, :], axis=(2, 3)) # Integrated over N_par, N_perp 
+        Absorption_2D_tor_avg = np.sum(Absorption[:,:,:,:, 0]/ptV[:,:,None, None], axis=(2, 3))
         beam= ax.contourf(R, Z, Edens_2D_tor_avg, levels=50)
         absorb = ax.contour(R, Z, Absorption_2D_tor_avg, levels=10, cmap='hot')
         flux_surf = ax.contour(R, Z, np.tile(rho, (len(theta), 1)).T, levels=10, colors='black', linestyles='dashed', linewidths=0.5)
@@ -315,6 +316,13 @@ if rank == 0:
             file.create_dataset('mode', data=mode)
             file.create_dataset('Trapksi0_h', data=Trapksi0_h)
             file.create_dataset('Trapksi0_w', data=Trapksi0_w)
+
+            # Add absorption data
+            absorption_data = compute_deposition_profiles(InputData(filename_abs), filename_abs_dat)
+            file.create_dataset('rho_abs', data=absorption_data['rho'])
+            file.create_dataset('dP_dV', data=absorption_data['dP_dV'])
+            file.create_dataset('dP_drho', data=absorption_data['dP_drho'])
+            file.create_dataset('dV_drho', data=absorption_data['dV_drho'])
 
             # Create sparse matrices for the bounce integrals
             # And accompanying masks, all ordered in the fortran style

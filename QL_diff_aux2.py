@@ -467,13 +467,16 @@ def D_RF(psi, d_psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Ede
 
 
         # Flux surface volume calculation
-        CB_l = ((ptR[l, :] - Rp)**2 + (ptZ[l, :] - Zp)**2) / abs(ptBR[l, :]*(ptZ[l, :] - Zp) - ptBz[l, :]*(ptR[l, :] - Rp))
-        dV_l = 4*np.pi**2 * d_psi[l] * bounce_sum(d_theta, CB_l, np.ones_like(CB_l), True, False)
+        #CB_l = ((ptR[l, :] - Rp)**2 + (ptZ[l, :] - Zp)**2) / abs(ptBR[l, :]*(ptZ[l, :] - Zp) - ptBz[l, :]*(ptR[l, :] - Rp))
+        #dV_l = 4*np.pi**2 * d_psi[l] * bounce_sum(d_theta, CB_l, np.ones_like(CB_l), True, False)
+        # Cell width calculation
+        #CB_lt = d_psi[l] * np.sqrt((ptR[l, :] - Rp)**2 + (ptZ[l, :] - Zp)**2) / abs(ptBR[l, :]*(ptZ[l, :] - Zp) - ptBz[l, :]*(ptR[l, :] - Rp)) / ptR[l, :]
+
         # Precalculate an interpolation function for Edens at psi_l
         # This is only needed for ksi values that correspond to trapped particles
         # The actual interpolation will differ for each ksi value, but the function is the same
 
-        Edens_at_psi = Edens[l,:,:,:]/dV_l # Divide by the flux surface volume element
+        Edens_at_psi = Edens[l,:,:,:]#/dV_l*CB_lt[:, None, None] # Divide by the flux surface volume element
         Edens_Int_at_psi = RegularGridInterpolator((theta, npar, nperp), Edens_at_psi, bounds_error=False, fill_value=None)
 
         #--------------------------------#

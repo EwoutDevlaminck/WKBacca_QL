@@ -21,7 +21,7 @@ import CommonModules.physics_constants as phys
 from Tools.PlotData.PlotAbsorptionProfile.plotabsprofile import compute_deposition_profiles
 
 # WKBacca functions import
-from QL_diff_aux2 import *
+from QL_diff_aux import *
 
 #---------------------------#
 #---Define physics constants---#
@@ -52,11 +52,11 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/L1_binned_QL.hdf5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_QL.hdf5'
 filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/L1_binned_abs.hdf5'
-outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/QL_waves_TCV74302_1.2_nofluct.h5'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_QL/QL_waves_TCV74302_1.2_nofluct_test.h5'
 
 grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 
@@ -82,7 +82,7 @@ ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 #Harmonics to take into account
 harmonics = np.array([2])
 
-plot_option = 1
+plot_option = 0
 
 # DKE calculations or not
 DKE_calc = 0
@@ -106,12 +106,9 @@ if rank == 0:
 
 
     psi = rho**2
-
-    # For the calculation, we'll need to have the volume element
-    # Psi is already a half-grid by definition, so we calculate dpsi as such
     d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
     d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
-    #d_psi = [0.37**2-0.35**2]
+
 
     idata = InputData(filename_Eq)
     Eq = TokamakEquilibrium(idata)
@@ -131,7 +128,6 @@ if rank == 0:
             R[l, t], Z[l, t] = Eq.flux_to_grid_coord(psi_val, theta_val)
     # As in notes, (called W_KB in the notes), we need Wfct * 4pi/c /(dV_N)
     Edens =  Wfct[:,:,:,:,0] / np.sum(ptV, axis=1)[:, None, None, None]
-    #Edens /= 2*np.pi # Average over the toroidal angle
     Edens /= dV_N[None, None, None, :] # Energy density in k-space
     Edens *= 4*np.pi /c * 1e6 
     # With this, Edens_N is k-space energy density in J/N^2
@@ -150,14 +146,6 @@ if rank == 0:
         plt.title('Beam in poloidal plane, resolved in rho, theta')
     plt.show()
         
-    # TEST, adding a factor V/2R0
-    # Somewhere, a factor quite similar to this (proportional to either psi or the area of a flux surface) is needed
-    #Rp = Eq.magn_axis_coord_Rz[0] / 100
-    #flux_volumes = np.zeros_like(psi)
-    #for l, psi_val in enumerate(psi):
-    #    flux_volumes[l] = Eq.compute_volume2(psi_val)
-    #Edens *= flux_volumes[:, None, None, None]/(2*Rp)
-
     # Calculate the reference quantities needed for the normalisation
     omega = phys.AngularFrequency(FreqGHz)
     _, _, _, _, _, _, ptNe, ptTe, _, _, _, _, _ = config_quantities(psi, theta, omega, Eq)
@@ -187,7 +175,7 @@ if rank == 0:
     Trapksi0_h = np.zeros(len(psi))
     Trapksi0_w = np.zeros(len(psi))
 
-    task_queue = [(i, psi_val, d_psi[i], Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
+    task_queue = [(i, psi_val, Edens[i]) for i, psi_val in enumerate(psi)] # (index, psi, Wfct slice)
 
     # Sort task queue by descending psi values
     # Higher psi values have more trapped particles, which are more expensive to calculate
@@ -265,7 +253,7 @@ else:
         if task is None:
             break
 
-        idx, psi_value, d_psi_value, Edens_slice = task
+        idx, psi_value, Edens_slice = task
 
         #Expand dimension of Wfct to have len=1 in the first dimension
         Edens_slice = np.expand_dims(Edens_slice, axis=0)
@@ -273,7 +261,7 @@ else:
         # Perform the calculation
         DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
         DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc, Trapksi0_h_loc, Trapksi0_w_loc = \
-        D_RF([psi_value], [d_psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
+        D_RF([psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
 
         result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
                     DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0], Trapksi0_h_loc, Trapksi0_w_loc)

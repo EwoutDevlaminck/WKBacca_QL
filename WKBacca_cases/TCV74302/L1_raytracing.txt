@@ -145,7 +145,7 @@ reflektometrierhoTreshhold = 1.0 # rho when tracing is stopped.
 # SCATTERING
 #############################################################################
 # set True in the following line if you wish to turn on the scattering.
-scattering = False
+scattering = True
 
 # set True in the following line if you wish to take into account
 # cross-polarization scattering

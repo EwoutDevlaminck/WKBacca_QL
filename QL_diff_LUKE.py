@@ -52,11 +52,11 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_QL.hdf5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/L1_binned_QL.hdf5'
 filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_abs.hdf5'
-outputname          = '/home/devlamin/WKBacca_QL/QL_waves_TCV74302_1.2_nofluct_test.h5'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/QL_waves_TCV74302_1.2_fluct.h5'
 
 grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 

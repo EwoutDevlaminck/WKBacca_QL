@@ -7,12 +7,13 @@ from scipy.interpolate import interp1d
 
 #Get the points from Chellaï's paper, taken in an ugly way.
 
-ampl_points = np.genfromtxt("/home/devlamin/Documents/WKBeam_related/WKBEAM_ED/StandardCases/TCV74310_1/input/amplitude_points.csv", delimiter=",")
+ampl_points = np.genfromtxt("/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/input/amplitude_points.csv", delimiter=";")
 
 #Add some points before and after the ones from the paper, in order to have a smooth interpolation.
 points_before = np.array([np.linspace(0., ampl_points[0, 0], 10), [ampl_points[0, 1]]*10]).T
 points_after = np.array([np.linspace(ampl_points[-1, 0], 2.0, 10), [ampl_points[-1, 1]]*10]).T
 ampl_points = np.vstack([points_before[:-1, :], ampl_points, points_after[1:, :]])
+
 
 ampl_rho_spline = interp1d(ampl_points[:,0], ampl_points[:,1], kind="cubic")
 

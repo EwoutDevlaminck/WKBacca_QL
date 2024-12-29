@@ -52,11 +52,11 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/L1_binned_QL.hdf5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_QL.hdf5'
 filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/L1_binned_abs.hdf5'
-outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/QL_waves_TCV74302_1.2_fluct.h5'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/QL_waves_TCV74302_1.2_nofluct.h5'
 
 grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 
@@ -82,7 +82,7 @@ ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 #Harmonics to take into account
 harmonics = np.array([2])
 
-plot_option = 0
+plot_option = 1
 
 # DKE calculations or not
 DKE_calc = 0
@@ -131,6 +131,8 @@ if rank == 0:
     Edens /= dV_N[None, None, None, :] # Energy density in k-space
     Edens *= 4*np.pi /c * 1e6 
     # With this, Edens_N is k-space energy density in J/N^2
+    #---Added factor for now to match C3PO output---#
+    Edens *= 1.5
 
     if plot_option:
         plt.figure()

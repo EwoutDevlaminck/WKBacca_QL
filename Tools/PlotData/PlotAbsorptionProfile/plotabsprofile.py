@@ -31,11 +31,22 @@ def compute_deposition_profiles(idata, inputfilename=None):
     print('\n') 
     print('Reading data file %s\n' %(inputfilename))
     fid = h5py.File(inputfilename,'r')
-    rhomin = fid.get('rhomin')[()]
-    rhomax = fid.get('rhomax')[()]
-    nmbrrho = fid.get('nmbrrho')[()]
-    Deltarho = (rhomax - rhomin) / nmbrrho
-    dP_drho = fid.get('Absorption')[()] / Deltarho
+    try:
+        rhomin = fid.get('rhomin')[()]
+        rhomax = fid.get('rhomax')[()]
+        nmbrrho = fid.get('nmbrrho')[()]
+        Deltarho = (rhomax - rhomin) / nmbrrho
+        dP_drho = fid.get('Absorption')[()] / Deltarho
+    except:
+        rhobins = fid.get('rhobins')[()]
+        print(rhobins)
+        rho = 0.5 * (rhobins[1:] + rhobins[:-1])
+        Deltarho = np.diff(rhobins)
+        print(Deltarho)
+        dP_drho = np.array(fid.get('Absorption')[()]) / Deltarho[:,np.newaxis]
+        nmbrrho = rho.size
+        rhomin = rho[0]
+        rhomax = rho[-1]
     mode = fid.get('Mode')[()]
     freq = fid.get('FreqGHz')[()]
     centraleta1 = fid.get('centraleta1')[()]
@@ -49,8 +60,8 @@ def compute_deposition_profiles(idata, inputfilename=None):
 
     # print some messages
     print('... processing data from: ' + inputfilename)
-    print('    total absorbed power is %.3fMW' %(np.sum(dP_drho)*Deltarho))
-    print('    grid size drho is %.3f' %(Deltarho))
+    print('    total absorbed power is %.3fMW' %(np.sum(dP_drho*Deltarho[:, np.newaxis], axis=0)[0]))
+    #print('    grid size drho is %.3f' %(Deltarho))
     print('    volume calculation flag: ' + idata.VolumeSource)
     try:
         print('    label of the data set: ' + idata.label + '\n')
@@ -102,8 +113,11 @@ def compute_deposition_profiles(idata, inputfilename=None):
         raise
 
     # Grid in rho and derivative of the volume with respect to rho
-    rho = np.linspace(rhomin, rhomax, nmbrrho) 
-    dV_drho = dV_drho_int(rho)
+    try :
+        dV_drho = dV_drho_int(rho)
+    except:
+        rho = np.linspace(rhomin, rhomax, nmbrrho) 
+        dV_drho = dV_drho_int(rho)
     #############################################################################
 
 

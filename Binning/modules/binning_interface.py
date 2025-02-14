@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 # Load local modules
 from Binning.modules.binning import binning
+from Binning.modules.binning_nonuni import binning as binning_nonuni
 from Binning.modules.compute_normalisationfactor import compute_norm_factor
 
 
@@ -47,24 +48,39 @@ def binning_pyinterface(idata):
     if len(idata.WhatToResolve) > 4:
         print('THE MAXIMUM NUMBER OF DIMENSIONS 4 IS EXCEEDED.\n')
         raise
+    try: 
+        uniform_bins = idata.uniform_bins
+    except:
+        uniform_bins = True
 
+    if uniform_bins == True:
     # put one bin in directions not in use
     # and the boundaries around zero (because the data_sim-values will be 0 for those dimensions)
-    nmbr = np.empty([4], dtype=int)
-    min = np.empty([4])
-    max = np.empty([4])
-    for i in range(0,4):
-        if i < len(idata.nmbr):
-            nmbr[i] = idata.nmbr[i]
-            min[i] = idata.min[i]
-            max[i] = idata.max[i]
-            if min[i] > max[i]:
-                print('ERROR: lower boundary larger than the upper one for %s\n' %(idata.WhatToResolve[i]))
-                raise
-        else:
-            nmbr[i] = 1
-            min[i] = -1.
-            max[i] = +1.
+        nmbr = np.empty([4], dtype=int)
+        min = np.empty([4])
+        max = np.empty([4])
+        for i in range(0,4):
+            if i < len(idata.nmbr):
+                nmbr[i] = idata.nmbr[i]
+                min[i] = idata.min[i]
+                max[i] = idata.max[i]
+                if min[i] > max[i]:
+                    print('ERROR: lower boundary larger than the upper one for %s\n' %(idata.WhatToResolve[i]))
+                    raise
+            else:
+                nmbr[i] = 1
+                min[i] = -1.
+                max[i] = +1.
+    else:
+        bins = np.empty([4], dtype=np.ndarray)
+        nmbr = np.empty([4], dtype=int)
+        for i in range(0,4):
+            if i < len(idata.bins):
+                bins[i] = idata.bins[i]
+                nmbr[i] = len(bins[i])-1
+            else:
+                bins[i] = np.linspace(-1.,1.,2)
+                nmbr[i] = 1
 
     # if only the total amplitude needs to be computed do this directly
     if idata.storeWfct == True:
@@ -250,15 +266,25 @@ def binning_pyinterface(idata):
             print("BINNING WITH WEIGHT 1.\n")
             sys.stdout.flush()
             # and do the binning 
-            tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
-                                  np.empty([0,0]),
-                                  WfctUnscattered,
-                                  min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
-                                  nmbr[0], nmbr[1], nmbr[2], nmbr[3],
-                                  data_sim_time,
-                                  1,   # binning unscattered rays
-                                  data_sim_scattered,
-                                  0)    # not the absorption binning scheme
+            if uniform_bins == True:
+                tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                    np.empty([0,0]),
+                                    WfctUnscattered,
+                                    min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
+                                    nmbr[0], nmbr[1], nmbr[2], nmbr[3],
+                                    data_sim_time,
+                                    1,   # binning unscattered rays
+                                    data_sim_scattered,
+                                    0)    # not the absorption binning scheme
+            else:
+                tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                    np.empty([0,0]),
+                                    WfctUnscattered,
+                                    bins[0], bins[1], bins[2], bins[3],
+                                    data_sim_time,
+                                    1,   # binning unscattered rays
+                                    data_sim_scattered,
+                                    0)
 
         # maybe also for the velocity field
         if idata.storeVelocityField == True:
@@ -285,15 +311,25 @@ def binning_pyinterface(idata):
                 elif VelocityComponentsToStore[k] == "Nperp":
                     weight = data_sim_Nperp[:,:]
 
-                tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
-                                       weight,
-                                       VelocityFieldUnscattered[:,:,:,:,k,:],
-                                       min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
-                                       nmbr[0], nmbr[1], nmbr[2], nmbr[3],
-                                       data_sim_time,
-                                       1,         # binning unscattered rays
-                                       data_sim_scattered,
-                                       0)     # not the absorption binning scheme
+                if uniform_bins == True:
+                    tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                        weight,
+                                        VelocityFieldUnscattered[:,:,:,:,k,:],
+                                        min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
+                                        nmbr[0], nmbr[1], nmbr[2], nmbr[3],
+                                        data_sim_time,
+                                        1,         # binning unscattered rays
+                                        data_sim_scattered,
+                                        0)     # not the absorption binning scheme
+                else:
+                    tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                        weight,
+                                        VelocityFieldUnscattered[:,:,:,:,k,:],
+                                        bins[0], bins[1], bins[2], bins[3],
+                                        data_sim_time,
+                                        1,         # binning unscattered rays
+                                        data_sim_scattered,
+                                        0)
 
                 
 
@@ -301,15 +337,25 @@ def binning_pyinterface(idata):
             print("BINNING WITH ABSORPTION WITH WEIGHT 1.\n")
             sys.stdout.flush()
             # and do the binning 
-            tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
-                                  np.empty([0,0]),
-                                  AbsorptionUnscattered,
-                                  min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
-                                  nmbr[0], nmbr[1], nmbr[2], nmbr[3],
-                                  data_sim_time,
-                                  1,   # binning unscattered rays
-                                  data_sim_scattered,
-                                  1)   # absorption scheme
+            if uniform_bins == True:
+                tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                    np.empty([0,0]),
+                                    AbsorptionUnscattered,
+                                    min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
+                                    nmbr[0], nmbr[1], nmbr[2], nmbr[3],
+                                    data_sim_time,
+                                    1,   # binning unscattered rays
+                                    data_sim_scattered,
+                                    1)   # absorption scheme
+            else:
+                tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                    np.empty([0,0]),
+                                    AbsorptionUnscattered,
+                                    bins[0], bins[1], bins[2], bins[3],
+                                    data_sim_time,
+                                    1,   # binning unscattered rays
+                                    data_sim_scattered,
+                                    1)
     
 
         print('%i unscattered rays have been binned, %i available in total.\n' %(tmpnmbrrays, nmbrRaysToUse))
@@ -323,7 +369,8 @@ def binning_pyinterface(idata):
                 print("BINNING WITH WEIGHT 1.\n")
                 sys.stdout.flush()
                 # and do the binning 
-                tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                if uniform_bins == True:
+                    tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
                                       np.empty([0,0]),
                                       WfctScattered,
                                       min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
@@ -331,7 +378,17 @@ def binning_pyinterface(idata):
                                       data_sim_time,
                                       2,   # binning scattered rays
                                       data_sim_scattered,
-                                      0)    # not the absorption binning scheme
+                                      0)
+                else:
+
+                    tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                      np.empty([0,0]),
+                                      WfctScattered,
+                                      bins[0], bins[1], bins[2], bins[3],
+                                      data_sim_time,
+                                      2,   # binning scattered rays
+                                      data_sim_scattered,
+                                      0)
                 
 
 
@@ -359,31 +416,52 @@ def binning_pyinterface(idata):
                         weight = data_sim_phiN[:,:].copy()
                     elif VelocityComponentsToStore[k] == "Nperp":
                         weight = data_sim_Nperp[:,:].copy()
-   
-                    tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
-                                           weight,
-                                           VelocityFieldScattered[:,:,:,:,k,:],
-                                           min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
-                                           nmbr[0], nmbr[1], nmbr[2], nmbr[3],
-                                           data_sim_time,
-                                           2,         # binning scattered rays
-                                           data_sim_scattered,
-                                           0)     # not the absorption binning scheme
+
+                    if uniform_bins == True:
+                        tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                            weight,
+                                            VelocityFieldScattered[:,:,:,:,k,:],
+                                            min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
+                                            nmbr[0], nmbr[1], nmbr[2], nmbr[3],
+                                            data_sim_time,
+                                            2,         # binning scattered rays
+                                            data_sim_scattered,
+                                            0)     # not the absorption binning scheme
+                    else:
+                        tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                            weight,
+                                            VelocityFieldScattered[:,:,:,:,k,:],
+                                            bins[0], bins[1], bins[2], bins[3],
+                                            data_sim_time,
+                                            2,         # binning scattered rays
+                                            data_sim_scattered,
+                                            0)
 
             
             if idata.storeAbsorption == True:
                 print("BINNING WITH ABSORPTION WITH WEIGHT 1.\n")
                 sys.stdout.flush()
                 # and do the binning 
-                tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
-                                      np.empty([0,0]),
-                                      AbsorptionScattered,
-                                      min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
-                                      nmbr[0], nmbr[1], nmbr[2], nmbr[3],
-                                      data_sim_time,
-                                      2,   # binning scattered rays
-                                      data_sim_scattered,
-                                      1)   # absorption scheme
+                if uniform_bins == True:
+
+                    tmpnmbrrays = binning(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                        np.empty([0,0]),
+                                        AbsorptionScattered,
+                                        min[0], max[0], min[1], max[1], min[2], max[2], min[3], max[3],
+                                        nmbr[0], nmbr[1], nmbr[2], nmbr[3],
+                                        data_sim_time,
+                                        2,   # binning scattered rays
+                                        data_sim_scattered,
+                                        1)   # absorption scheme
+                else:
+                    tmpnmbrrays = binning_nonuni(data_sim, data_sim_Wfct, data_sim_CorrectionFactor,
+                                        np.empty([0,0]),
+                                        AbsorptionScattered,
+                                        bins[0], bins[1], bins[2], bins[3],
+                                        data_sim_time,
+                                        2,   # binning scattered rays
+                                        data_sim_scattered,
+                                        1)
 
                              
                     
@@ -604,71 +682,112 @@ def binning_pyinterface(idata):
     fid.create_dataset("WhatToResolve", data=s)
 
     # look what boundaries are the different directions
-    for i in range(0,len(idata.WhatToResolve)):
-        if idata.WhatToResolve[i] == 'X':
-            fid.create_dataset("Xmin", data=idata.min[i])
-            fid.create_dataset("Xmax", data=idata.max[i])
-            fid.create_dataset("nmbrX", data=idata.nmbr[i])
+    if uniform_bins == True:
+        for i in range(0,len(idata.WhatToResolve)):
+            if idata.WhatToResolve[i] == 'X':
+                fid.create_dataset("Xmin", data=idata.min[i])
+                fid.create_dataset("Xmax", data=idata.max[i])
+                fid.create_dataset("nmbrX", data=idata.nmbr[i])
+                
+            elif idata.WhatToResolve[i] == 'Y':
+                fid.create_dataset("Ymin", data=idata.min[i])
+                fid.create_dataset("Ymax", data=idata.max[i])
+                fid.create_dataset("nmbrY", data=idata.nmbr[i])
+
+            elif idata.WhatToResolve[i] == 'Z':
+                fid.create_dataset("Zmin", data=idata.min[i])
+                fid.create_dataset("Zmax", data=idata.max[i])
+                fid.create_dataset("nmbrZ", data=idata.nmbr[i])
+
+            elif idata.WhatToResolve[i] == 'Nx':
+                fid.create_dataset("Nxmin", data=idata.min[i])
+                fid.create_dataset("Nxmax", data=idata.max[i])
+                fid.create_dataset("nmbrNx", data=idata.nmbr[i])
+
+            elif idata.WhatToResolve[i] == 'Ny':
+                fid.create_dataset("Nymin", data=idata.min[i])
+                fid.create_dataset("Nymax", data=idata.max[i])
+                fid.create_dataset("nmbrNy", data=idata.nmbr[i])
+
+            elif idata.WhatToResolve[i] == 'Nz':
+                fid.create_dataset("Nzmin", data=idata.min[i])
+                fid.create_dataset("Nzmax", data=idata.max[i])
+                fid.create_dataset("nmbrNz", data=idata.nmbr[i])
             
-        elif idata.WhatToResolve[i] == 'Y':
-             fid.create_dataset("Ymin", data=idata.min[i])
-             fid.create_dataset("Ymax", data=idata.max[i])
-             fid.create_dataset("nmbrY", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Nparallel':
+                fid.create_dataset("Nparallelmin", data=idata.min[i])
+                fid.create_dataset("Nparallelmax", data=idata.max[i])
+                fid.create_dataset("nmbrNparallel", data=idata.nmbr[i])
 
-        elif idata.WhatToResolve[i] == 'Z':
-             fid.create_dataset("Zmin", data=idata.min[i])
-             fid.create_dataset("Zmax", data=idata.max[i])
-             fid.create_dataset("nmbrZ", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Nperp':
+                fid.create_dataset("Nperpmin", data=idata.min[i])
+                fid.create_dataset("Nperpmax", data=idata.max[i])
+                fid.create_dataset("nmbrNperp", data=idata.nmbr[i])
 
-        elif idata.WhatToResolve[i] == 'Nx':
-            fid.create_dataset("Nxmin", data=idata.min[i])
-            fid.create_dataset("Nxmax", data=idata.max[i])
-            fid.create_dataset("nmbrNx", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'phiN':
+                fid.create_dataset("phiNmin", data=idata.min[i])
+                fid.create_dataset("phiNmax", data=idata.max[i])
+                fid.create_dataset("nmbrphiN", data=idata.nmbr[i])
 
-        elif idata.WhatToResolve[i] == 'Ny':
-            fid.create_dataset("Nymin", data=idata.min[i])
-            fid.create_dataset("Nymax", data=idata.max[i])
-            fid.create_dataset("nmbrNy", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Psi':
+                fid.create_dataset("Psimin", data=idata.min[i])
+                fid.create_dataset("Psimax", data=idata.max[i])
+                fid.create_dataset("nmbrPsi", data=idata.nmbr[i])
+                
+            elif idata.WhatToResolve[i] == 'rho':
+                fid.create_dataset("rhomin", data=idata.min[i])
+                fid.create_dataset("rhomax", data=idata.max[i])
+                fid.create_dataset("nmbrrho", data=idata.nmbr[i])
 
-        elif idata.WhatToResolve[i] == 'Nz':
-            fid.create_dataset("Nzmin", data=idata.min[i])
-            fid.create_dataset("Nzmax", data=idata.max[i])
-            fid.create_dataset("nmbrNz", data=idata.nmbr[i])
-           
-        elif idata.WhatToResolve[i] == 'Nparallel':
-            fid.create_dataset("Nparallelmin", data=idata.min[i])
-            fid.create_dataset("Nparallelmax", data=idata.max[i])
-            fid.create_dataset("nmbrNparallel", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Theta':
+                fid.create_dataset("Thetamin", data=idata.min[i])
+                fid.create_dataset("Thetamax", data=idata.max[i])
+                fid.create_dataset("nmbrTheta", data=idata.nmbr[i])
 
-        elif idata.WhatToResolve[i] == 'Nperp':
-            fid.create_dataset("Nperpmin", data=idata.min[i])
-            fid.create_dataset("Nperpmax", data=idata.max[i])
-            fid.create_dataset("nmbrNperp", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'R':
+                fid.create_dataset("Rmin", data=idata.min[i])
+                fid.create_dataset("Rmax", data=idata.max[i])
+                fid.create_dataset("nmbrR", data=idata.nmbr[i])
+    else:
+        for i in range(0,len(idata.WhatToResolve)):
+            if idata.WhatToResolve[i] == 'X':
+                fid.create_dataset("Xbins", data=idata.bins[i])
+                
+            elif idata.WhatToResolve[i] == 'Y':
+                fid.create_dataset("Ybins", data=idata.bins[i])
 
-        elif idata.WhatToResolve[i] == 'phiN':
-            fid.create_dataset("phiNmin", data=idata.min[i])
-            fid.create_dataset("phiNmax", data=idata.max[i])
-            fid.create_dataset("nmbrphiN", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Z':
+                fid.create_dataset("Zbins", data=idata.bins[i])
 
-        elif idata.WhatToResolve[i] == 'Psi':
-            fid.create_dataset("Psimin", data=idata.min[i])
-            fid.create_dataset("Psimax", data=idata.max[i])
-            fid.create_dataset("nmbrPsi", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Nx':
+                fid.create_dataset("Nxbins", data=idata.bins[i])
+
+            elif idata.WhatToResolve[i] == 'Ny':
+                fid.create_dataset("Nybins", data=idata.bins[i])
+
+            elif idata.WhatToResolve[i] == 'Nz':
+                fid.create_dataset("Nzbins", data=idata.bins[i])
             
-        elif idata.WhatToResolve[i] == 'rho':
-            fid.create_dataset("rhomin", data=idata.min[i])
-            fid.create_dataset("rhomax", data=idata.max[i])
-            fid.create_dataset("nmbrrho", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Nparallel':
+                fid.create_dataset("Nparallelbins", data=idata.bins[i])
 
-        elif idata.WhatToResolve[i] == 'Theta':
-            fid.create_dataset("Thetamin", data=idata.min[i])
-            fid.create_dataset("Thetamax", data=idata.max[i])
-            fid.create_dataset("nmbrTheta", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'Nperp':
+                fid.create_dataset("Nperpbins", data=idata.bins[i])
 
-        elif idata.WhatToResolve[i] == 'R':
-            fid.create_dataset("Rmin", data=idata.min[i])
-            fid.create_dataset("Rmax", data=idata.max[i])
-            fid.create_dataset("nmbrR", data=idata.nmbr[i])
+            elif idata.WhatToResolve[i] == 'phiN':
+                fid.create_dataset("phiNbins", data=idata.bins[i])
+
+            elif idata.WhatToResolve[i] == 'Psi':
+                fid.create_dataset("Psibins", data=idata.bins[i])
+                
+            elif idata.WhatToResolve[i] == 'rho':
+                fid.create_dataset("rhobins", data=idata.bins[i])
+
+            elif idata.WhatToResolve[i] == 'Theta':
+                fid.create_dataset("Thetabins", data=idata.bins[i])
+
+            elif idata.WhatToResolve[i] == 'R':
+                fid.create_dataset("Rbins", data=idata.bins[i])
 
     fid.create_dataset("nmbrRays", data=nmbrRays)
     fid.create_dataset("nmbrRaysUnscattered", data=nmbrRaysUnscattered)

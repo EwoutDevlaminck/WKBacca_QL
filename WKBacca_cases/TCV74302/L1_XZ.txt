@@ -40,6 +40,8 @@ outputfilename = ['L1_binned_XZ']
 
 WhatToResolve = ['R', 'Z']
 
+uniform_bins = True
+
 # here, you can choose the lower and upper boundaries:
 min = [75., -75.]
 max = [125., 75.]

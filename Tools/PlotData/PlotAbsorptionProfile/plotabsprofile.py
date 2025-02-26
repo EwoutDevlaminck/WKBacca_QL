@@ -39,10 +39,8 @@ def compute_deposition_profiles(idata, inputfilename=None):
         dP_drho = fid.get('Absorption')[()] / Deltarho
     except:
         rhobins = fid.get('rhobins')[()]
-        print(rhobins)
         rho = 0.5 * (rhobins[1:] + rhobins[:-1])
         Deltarho = np.diff(rhobins)
-        print(Deltarho)
         dP_drho = np.array(fid.get('Absorption')[()]) / Deltarho[:,np.newaxis]
         nmbrrho = rho.size
         rhomin = rho[0]

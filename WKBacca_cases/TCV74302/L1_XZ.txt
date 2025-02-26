@@ -27,7 +27,7 @@ nmbrFiles = 1
 outputdirectory =  'WKBacca_cases/TCV74302/output/'
 
 # output filename. If not defined, inputfilename is used and _binned attached 
-outputfilename = ['L1_binned_XZ']
+outputfilename = ['L1_binned_XZ_uniform']
 ##########################################################################
 
 
@@ -48,6 +48,9 @@ max = [125., 75.]
 
 # and the number of bins
 nmbr = [200, 400]
+
+# For non-uniform binning
+bins = [np.concatenate([np.linspace(75, 82, 10),np.linspace(82.1, 92, 100), np.linspace(92.1, 125, 10)]), np.concatenate([np.linspace(-75, -10, 10),np.linspace(-9.9, 5, 100), np.linspace(5.1, 75, 10)])]
 ##########################################################################
 
 

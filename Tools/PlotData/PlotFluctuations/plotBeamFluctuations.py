@@ -99,80 +99,133 @@ def plot_beam_fluct(inputdata):
             Vel_recorded = True
         except:
             Vel_recorded = False
-            
         try:
-            Xmin_beam = fid.get('Xmin')[()]
-            Xmax_beam = fid.get('Xmax')[()]
-            nmbrX_beam = fid.get('nmbrX')[()]
-            resolve = "X"
-        except:
-            Xmin_beam = fid.get('Rmin')[()]
-            Xmax_beam = fid.get('Rmax')[()]
-            nmbrX_beam = fid.get('nmbrR')[()]
-            resolve = "R"
+            uniform_bins = fid.get('uniform_bins')[()]
+        except: 
+            uniform_bins = True
+        
+        if uniform_bins:
+            try:
+                Xmin_beam = fid.get('Xmin')[()]
+                Xmax_beam = fid.get('Xmax')[()]
+                nmbrX_beam = fid.get('nmbrX')[()]
+                resolve = "X"
+            except:
+                Xmin_beam = fid.get('Rmin')[()]
+                Xmax_beam = fid.get('Rmax')[()]
+                nmbrX_beam = fid.get('nmbrR')[()]
+                resolve = "R"
 
-        try:
-            resolveY = True
-            Ymin_beam = fid.get('Ymin')[()]
-            Ymax_beam = fid.get('Ymax')[()]
-            nmbrY_beam = fid.get('nmbrY')[()]
-        except:
-            resolveY = False
-
-
-        try:
-            resolveNpar = True
-            Nparallelmin_beam = fid.get('Nparallelmin')[()]
-            Nparallelmax_beam = fid.get('Nparallelmax')[()]
-            nmbrNparallel_beam = fid.get('nmbrNparallel')[()]
-        except:
-            resolveNpar = False
+            try:
+                resolveY = True
+                Ymin_beam = fid.get('Ymin')[()]
+                Ymax_beam = fid.get('Ymax')[()]
+                nmbrY_beam = fid.get('nmbrY')[()]
+            except:
+                resolveY = False
 
 
-        Zmin_beam = fid.get('Zmin')[()]
-        Zmax_beam = fid.get('Zmax')[()]
-        nmbrZ_beam= fid.get('nmbrZ')[()]
+            try:
+                resolveNpar = True
+                Nparallelmin_beam = fid.get('Nparallelmin')[()]
+                Nparallelmax_beam = fid.get('Nparallelmax')[()]
+                nmbrNparallel_beam = fid.get('nmbrNparallel')[()]
+            except:
+                resolveNpar = False
+
+
+            Zmin_beam = fid.get('Zmin')[()]
+            Zmax_beam = fid.get('Zmax')[()]
+            nmbrZ_beam= fid.get('nmbrZ')[()]
+
+        else:
+            try:
+                Xbins = fid.get('Xbins')[()]
+                resolve = "X"
+            except:
+                Xbins = fid.get('Rbins')[()]
+                resolve = "R"
+
+            try:
+                resolveY = True
+                Ybins = fid.get('Ybins')[()]
+            except:
+                resolveY = False
+
+            try:
+                resolveNpar = True
+                Nparallelbins = fid.get('Nparallelbins')[()]
+            except:
+                resolveNpar = False
+
+            Zbins = fid.get('Zbins')[()]
+
         fid.close()
-
-        print(Abs_recorded)
-
-        # calculate the corresponding cube-edgelength
-        DeltaX = (Xmax_beam-Xmin_beam)/nmbrX_beam
-        DeltaZ = (Zmax_beam-Zmin_beam)/nmbrZ_beam
 
         if resolveY == True:
             Wfct[i] = np.sum(Wfct[i],axis=1)
         if resolveNpar == True:
             Wfct[i] = np.sum(Wfct[i],axis=2)
 
+        # calculate the corresponding cube-edgelength
+        if uniform_bins:
+            DeltaX = (Xmax_beam-Xmin_beam)/nmbrX_beam
+            DeltaZ = (Zmax_beam-Zmin_beam)/nmbrZ_beam
 
+            #Wfct[i] = Wfct[i]/DeltaX/DeltaZ
+            R_beam = np.linspace(Xmin_beam, Xmax_beam, nmbrX_beam) / 100 # m
+            Z_beam = np.linspace(Zmin_beam, Zmax_beam, nmbrZ_beam) / 100 # m
+            ZZ_beam, RR_beam = np.meshgrid(Z_beam, R_beam)
 
-        #Wfct[i] = Wfct[i]/DeltaX/DeltaZ
-        R = np.linspace(Xmin_beam, Xmax_beam, nmbrX_beam) / 100 # m
-        Z = np.linspace(Zmin_beam, Zmax_beam, nmbrZ_beam) / 100 # m
-        ZZ, RR = np.meshgrid(Z, R)
+            # Calculate the energy density in a gridcell [J/m³]
+            # E_dens = 4pi/c * BinnedTraces /dV
 
-        # Calculate the energy density in a gridcell [J/m³]
-        # E_dens = 4pi/c * BinnedTraces /dV
+            Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
 
-        Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
+            print(f'Total field energy = {np.sum(Wfct[i])}J')
 
-        print(f'Total field energy = {np.sum(Wfct[i])}J')
+            Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # Devided by toroidal volume element in m³
 
-        Wfct[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # Devided by toroidal volume element in m³
+            if Abs_recorded:
+                P_abs = np.sum(Absorption[i], axis=(0,1))
+                # And convert to MW/m³ by dividing by the toroidal length
+                Absorption[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # MW/m³
+                Absorption[i] /= 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # Averaged over the toroidal angle
+            
+            if Vel_recorded:
+                # We have to convert to MW/m², I'm not entirely sure how yet...
+                for j in range(Velocity[i].shape[2]):
+    
+                    Velocity[i][:,:,j, :] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # MW/m³
 
-        if Abs_recorded:
-            P_abs = np.sum(Absorption[i], axis=(0,1))
-            # And convert to MW/m³ by dividing by the toroidal length
-            Absorption[i] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
-            Absorption[i] /= 2 * np.pi * np.expand_dims(RR, axis=-1) # Averaged over the toroidal angle
-        
-        if Vel_recorded:
-            # We have to convert to MW/m², I'm not entirely sure how yet...
-            for j in range(Velocity[i].shape[2]):
-  
-                Velocity[i][:,:,j, :] /= DeltaX*DeltaZ * 1e-4 * 2 * np.pi * np.expand_dims(RR, axis=-1) # MW/m³
+        else:
+            DeltaX = np.diff(Xbins)
+            DeltaZ = np.diff(Zbins)
+            DeltaArea = np.outer(DeltaX, DeltaZ)
+            R_beam = (Xbins[:-1] + Xbins[1:]) / 2 / 100 # m
+            Z_beam = (Zbins[:-1] + Zbins[1:]) / 2 / 100 # m
+            ZZ_beam, RR_beam = np.meshgrid(Z_beam, R_beam)
 
+            # Calculate the energy density in a gridcell [J/m³]
+            # E_dens = 4pi/c * BinnedTraces /dV
+
+            Wfct[i] *= 1e6  * 4 * np.pi / (c/100) # Convert to J in the full volume
+
+            print(f'Total field energy = {np.sum(Wfct[i])}J')
+
+            Wfct[i] /= np.expand_dims(DeltaArea, axis=-1) * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # Devided by toroidal volume element in m³
+
+            if Abs_recorded:
+                P_abs = np.sum(Absorption[i], axis=(0,1))
+                # And convert to MW/m³ by dividing by the toroidal length
+                Absorption[i] /= np.expand_dims(DeltaArea, axis=-1) * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1)
+                Absorption[i] /= 2 * np.pi * np.expand_dims(RR_beam, axis=-1) # Averaged over the toroidal angle
+
+            if Vel_recorded:
+                # We have to convert to MW/m², I'm not entirely sure how yet...
+                for j in range(Velocity[i].shape[2]):
+    
+                    Velocity[i][:,:,j, :] /= np.expand_dims(DeltaArea, axis=-1) * 1e-4 * 2 * np.pi * np.expand_dims(RR_beam, axis=-1)
     
     ##############################################
     
@@ -324,12 +377,9 @@ def plot_beam_fluct(inputdata):
         transMap.set_under(color='b', alpha=0.)
         upperBound = np.amax(Q)
         lowerBound = upperBound*1e-2 #What's the lowest value we still display?
-        
-        Xlist_beam = np.linspace(Xmin_beam,Xmax_beam,nmbrX_beam)
-        Zlist_beam = np.linspace(Zmin_beam,Zmax_beam,nmbrZ_beam)
-        Zgrid_beam, Xgrid_beam = np.meshgrid(Zlist_beam, Xlist_beam)
 
-        beamfig = ax1.contourf(Xgrid_beam, Zgrid_beam, Q ,100, vmin=lowerBound, cmap=transMap, zorder=9) 
+        #beamfig = ax1.contourf(100*RR_beam, 100*ZZ_beam, Q ,100, vmin=lowerBound, cmap=transMap, zorder=9) 
+        beamfig = ax1.pcolormesh(100*RR_beam, 100*ZZ_beam, Q, vmin=lowerBound, cmap=transMap, zorder=9)
     
         #Make it so that the colourmap only starts at lowerBound
         displayedMap = plt.cm.ScalarMappable(norm=clrs.Normalize(lowerBound, upperBound), cmap=transMap)  
@@ -341,10 +391,10 @@ def plot_beam_fluct(inputdata):
 
     #Plot the absorption on top of the beam
     if Abs_recorded:
-        print(np.array(Absorption).shape)
         Absorption = np.sum(Absorption, axis=0)
-        levels = np.linspace(np.amax(Absorption)/100, np.amax(Absorption), 100)
-        abs_fig = ax1.contour(Xgrid_beam,Zgrid_beam,Absorption[:,:,0],levels, cmap='afmhot', zorder=12)
+        cmap_abs = plt.cm.afmhot
+        cmap_abs.set_under(color='b', alpha=0.)
+        abs_fig = ax1.contourf(100*RR_beam,100*ZZ_beam,Absorption[:,:,0], levels=100,vmin=np.amax(Absorption)/20, cmap=cmap_abs, zorder=12)
         colorbarAbs = plt.colorbar(abs_fig, orientation='vertical', pad=.1, shrink=.7)
         colorbarAbs.set_label(label=r'$P_{abs} (MW/m³)$', size=10, labelpad=-30, y=1.08, rotation=0)
         print(f'Total P_abs={P_abs[0]} +- {P_abs[1]}MW')
@@ -358,12 +408,20 @@ def plot_beam_fluct(inputdata):
     except AttributeError:
         beamView = False
 
-    if beamView == True:
-        ax1.set_xlim(Xmin_beam, Xmax_beam)
-        ax1.set_ylim(Zmin_beam, Zmax_beam)
+    if uniform_bins:
+        if beamView == True:
+            ax1.set_xlim(Xmin_beam, Xmax_beam)
+            ax1.set_ylim(Zmin_beam, Zmax_beam)
+        else:
+            ax1.set_xlim(Rmin, Rmax)
+            ax1.set_ylim(Zmin, Zmax)
     else:
-        ax1.set_xlim(Rmin, Rmax)
-        ax1.set_ylim(Zmin, Zmax)
+        if beamView == True:
+            ax1.set_xlim(Xbins[0], Xbins[-1])
+            ax1.set_ylim(Zbins[0], Zbins[-1])
+        else:
+            ax1.set_xlim(Rmin, Rmax)
+            ax1.set_ylim(Zmin, Zmax)
 
     plt.show()
 

@@ -54,30 +54,60 @@ def read_h5file(filename):
     except:
         EnergyFlux = None
 
-    
-    rhomin          = file.get('rhomin')[()]
-    rhomax          = file.get('rhomax')[()]
-    nmbrrho         = file.get('nmbrrho')[()]
-    rho             = np.linspace(rhomin, rhomax, nmbrrho)
+    try:
+        uniform_bins = file.get('uniform_bins')[()]
+    except: 
+        uniform_bins = True
 
-    Thetamin        = file.get('Thetamin')[()]
-    Thetamax       = file.get('Thetamax')[()]
-    nmbrTheta        = file.get('nmbrTheta')[()]
-    Theta           = np.linspace(Thetamin, Thetamax, nmbrTheta)
+    if uniform_bins:
+        rhomin          = file.get('rhomin')[()]
+        rhomax          = file.get('rhomax')[()]
+        nmbrrho         = file.get('nmbrrho')[()]
+        rho             = np.linspace(rhomin, rhomax, nmbrrho)
 
-    Nparallelmin    = file.get('Nparallelmin')[()]
-    Nparallelmax    = file.get('Nparallelmax')[()]
-    nmbrNparallel   = file.get('nmbrNparallel')[()]
-    Nparallel      = np.linspace(Nparallelmin, Nparallelmax, nmbrNparallel)
+        Thetamin        = file.get('Thetamin')[()]
+        Thetamax       = file.get('Thetamax')[()]
+        nmbrTheta        = file.get('nmbrTheta')[()]
+        Theta           = np.linspace(Thetamin, Thetamax, nmbrTheta)
 
-    Nperpmin        = file.get('Nperpmin')[()]
-    Nperpmax        = file.get('Nperpmax')[()]
-    nmbrNperp       = file.get('nmbrNperp')[()]
-    Nperp          = np.linspace(Nperpmin, Nperpmax, nmbrNperp)
+        Nparallelmin    = file.get('Nparallelmin')[()]
+        Nparallelmax    = file.get('Nparallelmax')[()]
+        nmbrNparallel   = file.get('nmbrNparallel')[()]
+        Nparallel      = np.linspace(Nparallelmin, Nparallelmax, nmbrNparallel)
+
+        Nperpmin        = file.get('Nperpmin')[()]
+        Nperpmax        = file.get('Nperpmax')[()]
+        nmbrNperp       = file.get('nmbrNperp')[()]
+        Nperp          = np.linspace(Nperpmin, Nperpmax, nmbrNperp)
+
+        psi = rho**2
+        d_npar = Nparallel[1] - Nparallel[0]
+        d_nperp = Nperp[1] - Nperp[0]
+        d_theta = theta[1] - theta[0]
+        d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
+
+    else:
+        rhobins         = file.get('rhobins')[()]
+        rho             = 1/2*(rhobins[1:] + rhobins[:-1])
+        thetabins       = file.get('Thetabins')[()]
+        Theta           = 1/2*(thetabins[1:] + thetabins[:-1])
+        Theta           = np.where(abs(Theta) < eps , 0, Theta)
+        Nparallelbins   = file.get('Nparallelbins')[()]
+        Nparallel       = 1/2*(Nparallelbins[1:] + Nparallelbins[:-1])
+        Nperpbins       = file.get('Nperpbins')[()]
+        Nperp           = 1/2*(Nperpbins[1:] + Nperpbins[:-1])
+
+        psibins         = rhobins**2
+        psi             = 1/2*(psibins[1:] + psibins[:-1])
+
+        d_npar = Nparallelbins[1] - Nparallelbins[0]
+        d_nperp = Nperpbins[1] - Nperpbins[0]
+        d_theta = thetabins[1] - thetabins[0]
+        d_psi = np.diff(psibins)
 
     file.close()
 
-    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, Theta, Nparallel, Nperp
+    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, psi, d_psi, Theta, d_theta, Nparallel, d_npar, Nperp, d_nperp
 
 #-------------------------------#
 #--- Calculate configuration space quantities on psi, theta grid---#

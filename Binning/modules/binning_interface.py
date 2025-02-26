@@ -792,7 +792,7 @@ def binning_pyinterface(idata):
     fid.create_dataset("nmbrRays", data=nmbrRays)
     fid.create_dataset("nmbrRaysUnscattered", data=nmbrRaysUnscattered)
     fid.create_dataset("nmbrRaysScattered", data=nmbrRaysScattered)
-
+    fid.create_dataset("uniform_bins", data=uniform_bins)
     fid.create_dataset("Mode",data=sigma)
     fid.create_dataset("FreqGHz",data=freq)
     fid.create_dataset("antennapolangle",data=antennapolangle)

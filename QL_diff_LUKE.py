@@ -52,11 +52,11 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_QL.hdf5'
+filename_WKBeam     = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_QL.hdf5'
 filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
 filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/L1_binned_abs.hdf5'
-outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/QL_waves_TCV74302_1.2_nofluct.h5'
+filename_abs_dat    = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_abs.hdf5'
+outputname          = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/QL_waves_TCV74302_1.2_nofluct.h5'
 
 grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
 
@@ -101,22 +101,13 @@ size = comm.Get_size()
 # Initialize shared data
 if rank == 0:
     # Initialize variables, load data, and pre-process as needed
-    WhatToResolve, FreqGHz, mode, Wfct, Absorption, _, rho, theta, Npar, Nperp = read_h5file(filename_WKBeam)
+    WhatToResolve, FreqGHz, mode, Wfct, Absorption, _, psi, d_psi, theta, d_theta, Npar, d_npar, Nperp, d_nperp = read_h5file(filename_WKBeam)
 
-
-
-    psi = rho**2
-    d_psi = 1/2* (np.diff(psi)[:-1] + np.diff(psi)[1:])
-    d_psi = np.concatenate(([np.diff(psi)[0]], d_psi, [np.diff(psi)[-1]]))
-
+    rho = np.sqrt(psi)
 
     idata = InputData(filename_Eq)
     Eq = TokamakEquilibrium(idata)
 
-    psi = rho**2
-    d_npar = Npar[1] - Npar[0]
-    d_nperp = Nperp[1] - Nperp[0]
-    d_theta = theta[1] - theta[0]
     dV_N = 2 * np.pi * Nperp * d_nperp * d_npar
     ptV = np.zeros((len(rho), len(theta)))
     R = np.zeros((len(rho), len(theta)))

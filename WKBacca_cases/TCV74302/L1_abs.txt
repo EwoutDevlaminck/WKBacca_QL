@@ -50,7 +50,7 @@ nmbr = [200]
 
 # In case non-uniform binning is wanted, define the bin edges for the binning!
 
-bins = [np.concatenate([np.linspace(0.01, 0.29, 10),np.linspace(0.3, 0.4, 20), np.linspace(0.41, 0.7, 10)])]
+bins = [np.concatenate([np.linspace(0.01, 0.29, 10),np.linspace(0.3, 0.4, 40), np.linspace(0.41, 0.7, 10)])]
 ##########################################################################
 
 

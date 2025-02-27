@@ -13,6 +13,9 @@ from Binning.modules.binning import binning
 from Binning.modules.binning_nonuni import binning as binning_nonuni
 from Binning.modules.compute_normalisationfactor import compute_norm_factor
 
+from scipy.io import loadmat
+
+
 
 
 ############################################################################
@@ -76,8 +79,19 @@ def binning_pyinterface(idata):
         nmbr = np.empty([4], dtype=int)
         for i in range(0,4):
             if i < len(idata.bins):
-                bins[i] = idata.bins[i]
-                nmbr[i] = len(bins[i])-1
+                if len(idata.bins[i])==0:
+                    # We want to use the simple description of uniform bins anyway, nothing was provided for this dimension
+                    nmbr[i] = idata.nmbr[i]
+                    bins[i] = np.linspace(idata.min[i],idata.max[i],idata.nmbr[i]+1)
+                else:
+                    if isinstance(idata.bins[i][0], str):
+                        # Then we take the bins from a file, and the location and name are provided
+                        grids = loadmat(idata.outputdirectory + idata.bins[i][0])['WKBacca_grids']
+                        bins[i] = grids[idata.bins[i][1]][0,0][0]
+                    else:
+                        bins[i] = idata.bins[i]
+
+                    nmbr[i] = len(bins[i])-1
             else:
                 bins[i] = np.linspace(-1.,1.,2)
                 nmbr[i] = 1
@@ -751,43 +765,43 @@ def binning_pyinterface(idata):
     else:
         for i in range(0,len(idata.WhatToResolve)):
             if idata.WhatToResolve[i] == 'X':
-                fid.create_dataset("Xbins", data=idata.bins[i])
+                fid.create_dataset("Xbins", data=bins[i])
                 
             elif idata.WhatToResolve[i] == 'Y':
-                fid.create_dataset("Ybins", data=idata.bins[i])
+                fid.create_dataset("Ybins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Z':
-                fid.create_dataset("Zbins", data=idata.bins[i])
+                fid.create_dataset("Zbins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Nx':
-                fid.create_dataset("Nxbins", data=idata.bins[i])
+                fid.create_dataset("Nxbins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Ny':
-                fid.create_dataset("Nybins", data=idata.bins[i])
+                fid.create_dataset("Nybins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Nz':
-                fid.create_dataset("Nzbins", data=idata.bins[i])
+                fid.create_dataset("Nzbins", data=bins[i])
             
             elif idata.WhatToResolve[i] == 'Nparallel':
-                fid.create_dataset("Nparallelbins", data=idata.bins[i])
+                fid.create_dataset("Nparallelbins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Nperp':
-                fid.create_dataset("Nperpbins", data=idata.bins[i])
+                fid.create_dataset("Nperpbins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'phiN':
-                fid.create_dataset("phiNbins", data=idata.bins[i])
+                fid.create_dataset("phiNbins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Psi':
-                fid.create_dataset("Psibins", data=idata.bins[i])
+                fid.create_dataset("Psibins", data=bins[i])
                 
             elif idata.WhatToResolve[i] == 'rho':
-                fid.create_dataset("rhobins", data=idata.bins[i])
+                fid.create_dataset("rhobins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'Theta':
-                fid.create_dataset("Thetabins", data=idata.bins[i])
+                fid.create_dataset("Thetabins", data=bins[i])
 
             elif idata.WhatToResolve[i] == 'R':
-                fid.create_dataset("Rbins", data=idata.bins[i])
+                fid.create_dataset("Rbins", data=bins[i])
 
     fid.create_dataset("nmbrRays", data=nmbrRays)
     fid.create_dataset("nmbrRaysUnscattered", data=nmbrRaysUnscattered)

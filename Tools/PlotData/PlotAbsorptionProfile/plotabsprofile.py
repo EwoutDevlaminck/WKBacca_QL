@@ -37,6 +37,7 @@ def compute_deposition_profiles(idata, inputfilename=None):
         nmbrrho = fid.get('nmbrrho')[()]
         Deltarho = (rhomax - rhomin) / nmbrrho
         dP_drho = fid.get('Absorption')[()] / Deltarho
+        uniform_bins = True
     except:
         rhobins = fid.get('rhobins')[()]
         rho = 0.5 * (rhobins[1:] + rhobins[:-1])
@@ -45,6 +46,7 @@ def compute_deposition_profiles(idata, inputfilename=None):
         nmbrrho = rho.size
         rhomin = rho[0]
         rhomax = rho[-1]
+        uniform_bins = False
     mode = fid.get('Mode')[()]
     freq = fid.get('FreqGHz')[()]
     centraleta1 = fid.get('centraleta1')[()]
@@ -58,7 +60,10 @@ def compute_deposition_profiles(idata, inputfilename=None):
 
     # print some messages
     print('... processing data from: ' + inputfilename)
-    print('    total absorbed power is %.3fMW' %(np.sum(dP_drho*Deltarho[:, np.newaxis], axis=0)[0]))
+    if uniform_bins:
+        print('    total absorbed power is %.3fMW' %(np.sum(dP_drho*Deltarho)))
+    else:
+        print('    total absorbed power is %.3fMW' %(np.sum(dP_drho*Deltarho[:, np.newaxis], axis=0)[0]))
     #print('    grid size drho is %.3f' %(Deltarho))
     print('    volume calculation flag: ' + idata.VolumeSource)
     try:

@@ -11,7 +11,7 @@
 # INPUT AND OUTPUT FILES
 ##########################################################################
 # the ray trace data used to bin
-inputdirectory = 'WKBacca_cases/TCV74302/output/'
+inputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/fluct/'
 equilibriumdirectory = 'WKBacca_cases/TCV74302/input/'
 
 # name of the input file, 
@@ -23,10 +23,10 @@ inputfilename = ['L1']
 nmbrFiles = 1
 
 # directory, where the binned results are written
-outputdirectory = 'WKBacca_cases/TCV74302/output/'
+outputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/'
 
 # output filename. If not defined, inputfilename is used and _binned attached 
-outputfilename = ['L1_binned_abs']
+outputfilename = ['L1_binned_abs_nonuni']
 ##########################################################################
 
 
@@ -39,7 +39,7 @@ outputfilename = ['L1_binned_abs']
 
 WhatToResolve = ['rho']
 
-uniform_bins=True
+uniform_bins=False
 
 # here, you can choose the lower and upper boundaries:
 min = [0.01]
@@ -50,7 +50,7 @@ nmbr = [200]
 
 # In case non-uniform binning is wanted, define the bin edges for the binning!
 
-bins = [np.concatenate([np.linspace(0.01, 0.29, 10),np.linspace(0.3, 0.4, 40), np.linspace(0.41, 0.7, 10)])]
+bins = [['WKBacca_grids.mat', 'rho_S']]
 ##########################################################################
 
 

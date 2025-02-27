@@ -52,13 +52,13 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_QL.hdf5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/L1_binned_QL_nonuni.hdf5'
 filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
-filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/output/L1_binned_abs.hdf5'
-outputname          = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/QL_waves_TCV74302_1.2_nofluct.h5'
+filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs_nonuni.txt'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/L1_binned_abs_nonuni.hdf5'
+outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/QL_waves_TCV74302_1.2_fluct.h5'
 
-grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBacca_grids.mat'
+grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
 
@@ -82,7 +82,7 @@ ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 #Harmonics to take into account
 harmonics = np.array([2])
 
-plot_option = 1
+plot_option = 0
 
 # DKE calculations or not
 DKE_calc = 0
@@ -101,9 +101,25 @@ size = comm.Get_size()
 # Initialize shared data
 if rank == 0:
     # Initialize variables, load data, and pre-process as needed
-    WhatToResolve, FreqGHz, mode, Wfct, Absorption, _, psi, d_psi, theta, d_theta, Npar, d_npar, Nperp, d_nperp = read_h5file(filename_WKBeam)
+    WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rhobins, thetabins, Nparallelbins, Nperpbins = read_h5file(filename_WKBeam)
 
-    rho = np.sqrt(psi)
+    # From the bins, calculate the central values and the bin widths
+
+    d_rho = np.diff(rhobins)
+    rho = 0.5 * (rhobins[1:] + rhobins[:-1])
+
+    psibins = rhobins**2
+    d_psi = np.diff(psibins)
+    psi = 0.5 * (psibins[1:] + psibins[:-1])
+
+    d_theta = np.diff(thetabins)[0]
+    theta = 0.5 * (thetabins[1:] + thetabins[:-1])
+
+    d_npar = np.diff(Nparallelbins)[0]
+    Npar = 0.5 * (Nparallelbins[1:] + Nparallelbins[:-1])
+
+    d_nperp = np.diff(Nperpbins)[0]
+    Nperp = 0.5 * (Nperpbins[1:] + Nperpbins[:-1])
 
     idata = InputData(filename_Eq)
     Eq = TokamakEquilibrium(idata)
@@ -177,7 +193,7 @@ if rank == 0:
 else:
     mode = None
     FreqGHz = None
-    theta = None
+    thetabins = None
     p_norm = None
     ksi0 = None
     Npar = None
@@ -189,7 +205,7 @@ else:
 # Broadcast shared data
 mode = comm.bcast(mode, root=0)
 FreqGHz = comm.bcast(FreqGHz, root=0)
-theta = comm.bcast(theta, root=0)
+thetabins = comm.bcast(thetabins, root=0)
 p_norm_w = comm.bcast(p_norm_w, root=0)
 p_norm_h = comm.bcast(p_norm_h, root=0)
 ksi0_w = comm.bcast(ksi0_w, root=0)
@@ -254,7 +270,7 @@ else:
         # Perform the calculation
         DRF0_wh_loc, DRF0D_wh_loc, DRF0F_wh_loc, DRF0_hw_loc,\
         DRF0D_hw_loc, DRF0F_hw_loc, DRF0_hh_loc, DRF0D_hh_loc, Trapksi0_h_loc, Trapksi0_w_loc = \
-        D_RF([psi_value], theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
+        D_RF([psi_value], thetabins, p_norm_w, p_norm_h, ksi0_w, ksi0_h, Npar, Nperp, Edens_slice, Eq, Ne_ref, Te_ref, n=harmonics, FreqGHz=FreqGHz, DKE_calc=DKE_calc)
 
         result_data = (DRF0_wh_loc[0], DRF0D_wh_loc[0], DRF0F_wh_loc[0], DRF0_hw_loc[0],
                     DRF0D_hw_loc[0], DRF0F_hw_loc[0], DRF0_hh_loc[0], DRF0D_hh_loc[0], Trapksi0_h_loc, Trapksi0_w_loc)
@@ -264,8 +280,6 @@ else:
 
 
 if rank == 0:
-    toc = time.time()
-    print(f'\rTime taken: {toc-tic:.2f} s', flush=True)
 
     # Transpose the arrays to have [np, nksi, npsi, nharmonics] as used in LUKE
     DRF0_wh = np.transpose(DRF0_wh, (1, 2, 0, 3))
@@ -416,6 +430,10 @@ if rank == 0:
             ax.set_aspect('equal')
         plt.colorbar(axs[0, 0].pcolormesh(PP, PPer, np.sum(DRF0_wh[:,:,0], axis=-1).T, cmap='plasma', vmax=maxDrf), ax=axs, orientation='vertical')
         plt.show()
+
+    print('Execution finished.\n')
+    toc = time.time()
+    print(f'\rTime taken: {toc-tic:.2f} s', flush=True)
 
 
 sys.exit(0)

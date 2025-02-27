@@ -38,7 +38,7 @@ outputfilename = ['L1_binned_QL']
 
 WhatToResolve = ['rho', 'Theta', 'Nparallel', 'Nperp']
 
-uniform_bins=False
+uniform_bins=True
 
 # here, you can choose the lower and upper boundaries:
 min = [0.05, -3.14159, -0.45, 0.65]

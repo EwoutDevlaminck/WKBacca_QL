@@ -40,6 +40,11 @@ cython_modules = [
         name="Binning.modules.binning", 
         sources=["Binning/modules/binning.pyx"],  
         include_dirs=['.', numpy.get_include()]
+    ),
+    Extension(
+        name="Binning.modules.binning_nonuni", 
+        sources=["Binning/modules/binning_nonuni.pyx"],  
+        include_dirs=['.', numpy.get_include()]
     )
 ]
 

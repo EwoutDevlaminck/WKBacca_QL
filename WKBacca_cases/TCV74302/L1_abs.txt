@@ -39,12 +39,18 @@ outputfilename = ['L1_binned_abs']
 
 WhatToResolve = ['rho']
 
+uniform_bins=True
+
 # here, you can choose the lower and upper boundaries:
 min = [0.01]
 max = [0.5]
 
 # and the number of bins
 nmbr = [200]
+
+# In case non-uniform binning is wanted, define the bin edges for the binning!
+
+bins = [np.concatenate([np.linspace(0.01, 0.29, 10),np.linspace(0.3, 0.4, 40), np.linspace(0.41, 0.7, 10)])]
 ##########################################################################
 
 

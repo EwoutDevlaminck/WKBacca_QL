@@ -54,30 +54,42 @@ def read_h5file(filename):
     except:
         EnergyFlux = None
 
-    
-    rhomin          = file.get('rhomin')[()]
-    rhomax          = file.get('rhomax')[()]
-    nmbrrho         = file.get('nmbrrho')[()]
-    rho             = np.linspace(rhomin, rhomax, nmbrrho)
+    try:
+        uniform_bins = file.get('uniform_bins')[()]
+    except: 
+        uniform_bins = True
 
-    Thetamin        = file.get('Thetamin')[()]
-    Thetamax       = file.get('Thetamax')[()]
-    nmbrTheta        = file.get('nmbrTheta')[()]
-    Theta           = np.linspace(Thetamin, Thetamax, nmbrTheta)
+    if uniform_bins:
+        rhomin          = file.get('rhomin')[()]
+        rhomax          = file.get('rhomax')[()]
+        nmbrrho         = file.get('nmbrrho')[()]
+        rhobins         = np.linspace(rhomin, rhomax, nmbrrho+1)
 
-    Nparallelmin    = file.get('Nparallelmin')[()]
-    Nparallelmax    = file.get('Nparallelmax')[()]
-    nmbrNparallel   = file.get('nmbrNparallel')[()]
-    Nparallel      = np.linspace(Nparallelmin, Nparallelmax, nmbrNparallel)
+        Thetamin        = file.get('Thetamin')[()]
+        Thetamax        = file.get('Thetamax')[()]
+        nmbrTheta       = file.get('nmbrTheta')[()]
+        Thetabins       = np.linspace(Thetamin, Thetamax, nmbrTheta+1)
 
-    Nperpmin        = file.get('Nperpmin')[()]
-    Nperpmax        = file.get('Nperpmax')[()]
-    nmbrNperp       = file.get('nmbrNperp')[()]
-    Nperp          = np.linspace(Nperpmin, Nperpmax, nmbrNperp)
+        Nparallelmin    = file.get('Nparallelmin')[()]
+        Nparallelmax    = file.get('Nparallelmax')[()]
+        nmbrNparallel   = file.get('nmbrNparallel')[()]
+        Nparallelbins   = np.linspace(Nparallelmin, Nparallelmax, nmbrNparallel+1)
+
+        Nperpmin        = file.get('Nperpmin')[()]
+        Nperpmax        = file.get('Nperpmax')[()]
+        nmbrNperp       = file.get('nmbrNperp')[()]
+        Nperpbins       = np.linspace(Nperpmin, Nperpmax, nmbrNperp+1)
+
+
+    else:
+        rhobins         = file.get('rhobins')[()]
+        Thetabins       = file.get('Thetabins')[()]
+        Nparallelbins   = file.get('Nparallelbins')[()]
+        Nperpbins       = file.get('Nperpbins')[()]
 
     file.close()
 
-    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rho, Theta, Nparallel, Nperp
+    return WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rhobins, Thetabins, Nparallelbins, Nperpbins
 
 #-------------------------------#
 #--- Calculate configuration space quantities on psi, theta grid---#
@@ -339,16 +351,16 @@ def bounce_sum(d_theta_grid_j, CB_j, Func, passing, sigma_dep=False):
 #---THIS IS THE MAIN FUNCTION---#
 #-------------------------------#
 
-def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, DKE_calc=False, eps=np.finfo(np.float32).eps):
+def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq, Ne_ref, Te_ref, n=[2, 3], FreqGHz=82.7, DKE_calc=False, eps=np.finfo(np.float32).eps):
 
     """
     The main function to calculate the RF diffusion coefficients.
     It takes in the following arguments:
 
         psi: np.array [l]
-            The radial coordinate 
-        theta: np.array [t]
-            The poloidal coordinate
+            The radial coordinate, already on the half grid as required
+        theta_w: np.array [t]
+            The poloidal coordinate, on the whole grid made of the edges of the bins
         p_norm_w: np.array [i]
             The normalised (to the thermal momentum) momentum grid (whole grid)
         ksi0_w: np.array [j]
@@ -403,13 +415,13 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
     
     # For theta. Psi is a half grid already, theta is a full grid
 
-    d_theta = 1/2* (np.diff(theta)[:-1] + np.diff(theta)[1:])
-    d_theta = np.concatenate(([np.diff(theta)[0]/2], d_theta, [np.diff(theta)[-1]/2]))
+    d_theta = np.diff(theta_w)
+    theta_h = theta_w[:-1] + d_theta/2
 
     # Precalculate quantities in configuration space
     # Careful, these are only to be used for passign particles, that keep the full theta grid!
     Rp, Zp = Eq.magn_axis_coord_Rz /100 #m
-    ptR, ptZ, ptBt, ptBR, ptBz, ptB, ptNe, ptTe, P, X, R, L, S = config_quantities(psi, theta, omega, Eq)
+    ptR, ptZ, ptBt, ptBR, ptBz, ptB, ptNe, ptTe, P, X, R, L, S = config_quantities(psi, theta_h, omega, Eq)
 
 
     #--------------------------------#
@@ -451,10 +463,10 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
         # The calculation is split completely into the psi grid,
         # as the calculation is independent for every psi value
 
-        ptB_Int_at_psi = interp1d(theta, ptB[l, :],fill_value=np.amax(ptB[l, :]), bounds_error=False)
+        ptB_Int_at_psi = interp1d(theta_h, ptB[l, :],fill_value=np.amax(ptB[l, :]), bounds_error=False)
 
-        _, Trapksi0_w[l], theta_T_w[l] = Trapping_boundary(ksi0_w, ptB_Int_at_psi, theta)
-        _, Trapksi0_h[l], theta_T_h[l] = Trapping_boundary(ksi0_h, ptB_Int_at_psi, theta)
+        _, Trapksi0_w[l], theta_T_w[l] = Trapping_boundary(ksi0_w, ptB_Int_at_psi, theta_h)
+        _, Trapksi0_h[l], theta_T_h[l] = Trapping_boundary(ksi0_h, ptB_Int_at_psi, theta_h)
         # First find the normalisation prefactor for the D_RF matrices [i, j]
         C_RF_wh =  D_RF_prefactor(p_norm_w, ksi0_h, Ne_ref, Te_ref, omega, eps)
         C_RF_hw =  D_RF_prefactor(p_norm_h, ksi0_w, Ne_ref, Te_ref, omega, eps)
@@ -469,7 +481,7 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
         # This is only needed for ksi values that correspond to trapped particles
         # The actual interpolation will differ for each ksi value, but the function is the same
         Edens_at_psi = Edens[l,:,:,:]
-        Edens_Int_at_psi = RegularGridInterpolator((theta, npar, nperp), Edens_at_psi, bounds_error=False, fill_value=None)
+        Edens_Int_at_psi = RegularGridInterpolator((theta_h, npar, nperp), Edens_at_psi, bounds_error=False, fill_value=None)
 
 
         #--------------------------------#
@@ -486,7 +498,7 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
                 # Then it is rather easy, all theta values are accessible
                 passing = True      
 
-                theta_grid_j_h = theta
+                theta_grid_j_h = theta_h
                 d_theta_grid_j_h = d_theta
 
 
@@ -522,8 +534,8 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_wh = np.zeros((len(theta), len(p_norm_w), len(n)))
-                D_rf_lj_hh = np.zeros((len(theta), len(p_norm_h), len(n)))
+                D_rf_lj_wh = np.zeros((len(theta_h), len(p_norm_w), len(n)))
+                D_rf_lj_hh = np.zeros((len(theta_h), len(p_norm_h), len(n)))
 
                 # No new theta grid
                 Edens_lj_h = Edens_at_psi
@@ -580,31 +592,30 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
 
                 # The theta roots are the boundaries of the region where the particles are trapped
                 theta_T_m, theta_T_M = theta_T_h[l, j]
-                theta_aux= theta[(theta >= theta_T_m) & (theta <= theta_T_M)]
-                # Add the boundaries to the grid
-                theta_aux = np.concatenate(([theta_T_m], theta_aux, [theta_T_M]))
+                theta_w_aux= theta_w[(theta_w >= theta_T_m) & (theta_w <= theta_T_M)]
+                # Add the boundaries to the whole grid
+                theta_w_aux = np.concatenate(([theta_T_m], theta_w_aux, [theta_T_M]))
 
-                d_theta_aux = 1/2* (np.diff(theta_aux)[:-1] + np.diff(theta_aux)[1:])
-                d_theta_aux = np.concatenate(([np.diff(theta_aux)[0]/2], d_theta_aux, [np.diff(theta_aux)[-1]/2]))
+                d_theta_grid_j_h = np.diff(theta_w_aux) # The grid is now the full grid, so we can just take the dif
 
                 #Update: Try to follow DKEp134 on the numerical integration, we need the half grid!
                 # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
 
-                theta_grid_j_h = 0.5 * (theta_aux[1:] + theta_aux[:-1])
-                if theta_grid_j_h[-1] > theta[-1]:
-                    theta_grid_j_h[-1] = theta[-1]
-                if theta_grid_j_h[0] < theta[0]:
-                    theta_grid_j_h[0] = theta[0]
-                d_theta_grid_j_h = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
+                theta_grid_j_h = theta_w_aux[:-1] + d_theta_grid_j_h/2
+
+                if theta_grid_j_h[-1] > theta_h[-1]:
+                    theta_grid_j_h[-1] = theta_h[-1]
+                if theta_grid_j_h[0] < theta_h[0]:
+                    theta_grid_j_h[0] = theta_h[0]
 
                 # From here, most is the same as the passing case, but we have to interpolate the Wfct
 
-                B0_h, _               = minmaxB(ptB_Int_at_psi, theta)
-                B_at_psi_j_h          = interp1d(theta, ptB[l, :])(theta_grid_j_h)
-                BR_at_psi_j_h         = interp1d(theta, ptBR[l, :])(theta_grid_j_h)
-                Bz_at_psi_j_h         = interp1d(theta, ptBz[l, :])(theta_grid_j_h)
-                R_axis_at_psi_j_h     = interp1d(theta, ptR[l, :])(theta_grid_j_h) - Rp
-                Z_axis_at_psi_j_h     = interp1d(theta, ptZ[l, :])(theta_grid_j_h) - Zp
+                B0_h, _               = minmaxB(ptB_Int_at_psi, theta_h)
+                B_at_psi_j_h          = interp1d(theta_h, ptB[l, :])(theta_grid_j_h)
+                BR_at_psi_j_h         = interp1d(theta_h, ptBR[l, :])(theta_grid_j_h)
+                Bz_at_psi_j_h         = interp1d(theta_h, ptBz[l, :])(theta_grid_j_h)
+                R_axis_at_psi_j_h     = interp1d(theta_h, ptR[l, :])(theta_grid_j_h) - Rp
+                Z_axis_at_psi_j_h     = interp1d(theta_h, ptZ[l, :])(theta_grid_j_h) - Zp
 
                 # Get configuration quantities on the newly defined theta grid
                 # Only the ones that depend on theta
@@ -701,7 +712,7 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
 
                 passing = True
 
-                theta_grid_j_w = theta
+                theta_grid_j_w = theta_h
                 d_theta_grid_j_w = d_theta
 
 
@@ -737,7 +748,7 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
 
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
-                D_rf_lj_hw = np.zeros((len(theta), len(p_norm_h), len(n)))
+                D_rf_lj_hw = np.zeros((len(theta_h), len(p_norm_h), len(n)))
 
                 Edens_lj_w = Edens_at_psi
 
@@ -778,32 +789,31 @@ def D_RF(psi, theta, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, Eq,
 
                 # The theta roots are the boundaries of the region where the particles are trapped
                 theta_T_m, theta_T_M = theta_T_w[l, j]
-                theta_aux= theta[(theta >= theta_T_m) & (theta <= theta_T_M)]
+                theta_w_aux= theta_w[(theta_w >= theta_T_m) & (theta_w <= theta_T_M)]
                 # Add the boundaries to the grid
-                theta_aux = np.concatenate(([theta_T_m], theta_aux, [theta_T_M]))
+                theta_w_aux = np.concatenate(([theta_T_m], theta_w_aux, [theta_T_M]))
 
 
-                d_theta_aux = 1/2* (np.diff(theta_aux)[:-1] + np.diff(theta_aux)[1:])
-                d_theta_aux = np.concatenate(([np.diff(theta_aux)[0]/2], d_theta_aux, [np.diff(theta_aux)[-1]/2]))
+                d_theta_grid_j_w = np.diff(theta_w_aux) # The grid is now the full grid, so we can just take the dif
 
                 #Update: Try to follow DKEp134 on the numerical integration, we need the half grid!
                 # Otherwise we inevitably run into issues where B_ratio_h*(1-ksi_val**2) > 1
 
-                theta_grid_j_w = 0.5 * (theta_aux[1:] + theta_aux[:-1])
-                if theta_grid_j_w[-1] > theta[-1]:
-                    theta_grid_j_w[-1] = theta[-1]
-                if theta_grid_j_w[0] < theta[0]:
-                    theta_grid_j_w[0] = theta[0]
-                d_theta_grid_j_w = 0.5 * (d_theta_aux[1:] + d_theta_aux[:-1])
+                theta_grid_j_w = theta_w_aux[:-1] + d_theta_grid_j_w/2
+                if theta_grid_j_w[-1] > theta_h[-1]:
+                    theta_grid_j_w[-1] = theta_h[-1]
+                if theta_grid_j_w[0] < theta_h[0]:
+                    theta_grid_j_w[0] = theta_h[0]
+     
 
                 # From here, most is the same as the passing case, but we have to interpolate the Wfct
 
-                B0_w, _               = minmaxB(ptB_Int_at_psi, theta)
-                B_at_psi_j_w          = interp1d(theta, ptB[l, :])(theta_grid_j_w)
-                BR_at_psi_j_w         = interp1d(theta, ptBR[l, :])(theta_grid_j_w)
-                Bz_at_psi_j_w         = interp1d(theta, ptBz[l, :])(theta_grid_j_w)
-                R_axis_at_psi_j_w     = interp1d(theta, ptR[l, :])(theta_grid_j_w) - Rp
-                Z_axis_at_psi_j_w     = interp1d(theta, ptZ[l, :])(theta_grid_j_w) - Zp
+                B0_w, _               = minmaxB(ptB_Int_at_psi, theta_h)
+                B_at_psi_j_w          = interp1d(theta_h, ptB[l, :])(theta_grid_j_w)
+                BR_at_psi_j_w         = interp1d(theta_h, ptBR[l, :])(theta_grid_j_w)
+                Bz_at_psi_j_w         = interp1d(theta_h, ptBz[l, :])(theta_grid_j_w)
+                R_axis_at_psi_j_w     = interp1d(theta_h, ptR[l, :])(theta_grid_j_w) - Rp
+                Z_axis_at_psi_j_w     = interp1d(theta_h, ptZ[l, :])(theta_grid_j_w) - Zp
 
                 # Get configuration quantities on the newly defined theta grid
                 # Only the ones that depend on theta

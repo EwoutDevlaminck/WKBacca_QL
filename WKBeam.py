@@ -113,7 +113,7 @@ else:
     elif flag == 'plotbin' or flag == 'beamFluct':
     #Added by Ewout. To also plot the computed equilibrium flux surfaces on top of
     # the beam propagation
-    	inputfile = sys.argv[2:]
+        inputfile = sys.argv[2:]
     else:
         inputfile = sys.argv[2]
         

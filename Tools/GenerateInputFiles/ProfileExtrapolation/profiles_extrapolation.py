@@ -57,7 +57,7 @@
 # <codecell>
 
 # Working directory (must contain the original data files)
-working_dir = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/input/'
+working_dir = '/home/devlamin/WKbeam_simulations/TCV_85352_1.3_nofluct/input/'
 
 # <codecell>
 
@@ -148,7 +148,7 @@ plot(Te);
 # Parameters for the density profile
 IndexIstart = rho_ne.size - 6
 IndexIstop = rho_ne.size
-fit_parameter_seed_ne = [1., 0.03, 1.2, 0.2]
+fit_parameter_seed_ne = [1.2, 0.03, 0.2, 0.2]
 # Parameters for the temperature profile
 IndexJstart = rho_Te.size - 6
 IndexJstop = rho_Te.size

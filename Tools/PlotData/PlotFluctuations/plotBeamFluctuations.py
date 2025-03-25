@@ -328,10 +328,10 @@ def plot_beam_fluct(inputdata):
         ax1.set_facecolor(reds_map(0.))
     else:
         Ne = IntSample(R1d, Z1d, Eq.NeInt.eval)
-        deltaNe = np.where(equilibrium<1.08, np.sqrt(fluct.T)*Ne, 0)
-        c1 = ax1.pcolormesh(R1d, Z1d, deltaNe, cmap='Reds', alpha=.9, zorder=0)
+        deltaNe = np.where(equilibrium<1.6, fluct.T*Ne, 0)
+        c1 = ax1.pcolormesh(R1d, Z1d, 1e3*deltaNe, cmap='Reds', alpha=.9, zorder=0)
         colorbarFluct = plt.colorbar(c1, orientation='vertical', pad=.05, shrink=.7)
-        #colorbarFluct.set_label(label=r'$\langle \delta n_e^2\rangle /n_e^2$', size=16)
+        #colorbarFluct.set_label(label=r'$\langle \delta n_e\rangle /n_e$', size=16)
         colorbarFluct.set_label(label=r'$RMS\ \delta n_e [1e19 m^{-3}]$', size=13)
     ### colorbarFluct.set_label(r'')
     # ... flux surfaces ...

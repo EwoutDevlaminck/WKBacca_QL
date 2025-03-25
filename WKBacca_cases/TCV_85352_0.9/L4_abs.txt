@@ -1,4 +1,4 @@
-# Example for TCV 74302, for QL diffusion development
+# Example for TCV_85352_0.9, for QL diffusion development
 #
 # Control parameters for processing the absorption profile
 # ---
@@ -11,22 +11,22 @@
 # INPUT AND OUTPUT FILES
 ##########################################################################
 # the ray trace data used to bin
-inputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302/WKBeam_results/nofluct/'
-equilibriumdirectory = 'WKBacca_cases/TCV74302/input/'
+inputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/fluct/'
+equilibriumdirectory = 'WKBacca_cases/TCV_85352_0.9/input/'
 
 # name of the input file, 
 # will be composed by what is indicated here and formal stuff
-inputfilename = ['L1']
+inputfilename = ['L4']
 
 # number of files, if more than one, not only the file that starts with
 # rank0... is used.
 nmbrFiles = 1
 
 # directory, where the binned results are written
-outputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/nofluct/'
+outputdirectory = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/fluct/'
 
 # output filename. If not defined, inputfilename is used and _binned attached 
-outputfilename = ['L1_binned_abs_nonuni']
+outputfilename = ['L4_binned_abs']
 ##########################################################################
 
 
@@ -39,18 +39,18 @@ outputfilename = ['L1_binned_abs_nonuni']
 
 WhatToResolve = ['rho']
 
-uniform_bins=False
+uniform_bins=True
 
 # here, you can choose the lower and upper boundaries:
 min = [0.01]
-max = [0.5]
+max = [0.7]
 
 # and the number of bins
-nmbr = [200]
+nmbr = [50]
 
 # In case non-uniform binning is wanted, define the bin edges for the binning!
 
-bins = [['WKBacca_grids.mat', 'rho_S']]
+bins = [np.concatenate([np.linspace(0.01, 0.29, 10),np.linspace(0.3, 0.4, 40), np.linspace(0.41, 0.7, 10)])]
 ##########################################################################
 
 
@@ -62,7 +62,7 @@ bins = [['WKBacca_grids.mat', 'rho_S']]
 # such that energy density / flow / power absorption is stored.
 # if it is commented out, the electric field is normalised to 1
 # at the central antenna position
-InputPower = 0.611
+InputPower = 0.5861
 
 # put True in the next line if you wish to save the basic 
 # Wfct result (binning weight 1)

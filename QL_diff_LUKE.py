@@ -52,13 +52,13 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/L1_binned_QL_nonuni.hdf5'
-filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_raytracing.txt'
-filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV74302/L1_abs_nonuni.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/L1_binned_abs_nonuni.hdf5'
-outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBeam_results/fluct/QL_waves_TCV74302_1.2_fluct.h5'
+filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/L4_binned_QL_nonuni.hdf5'
+filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/L4_raytracing.txt'
+filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/L4_abs_nonuni.txt'
+filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/L4_binned_abs_nonuni.hdf5'
+outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/QL_waves_TCV_85352_0.9_nofluct.h5'
 
-grid_file           = '/home/devlamin/WKBacca_LUKE_cases/TCV_74302_nonuni/WKBacca_grids.mat'
+grid_file           = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/input/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
 
@@ -67,12 +67,12 @@ ksi0_h = grids['ksi0_h'][0,0][0]
 ksi0_w = grids['ksi0_w'][0,0][0]
 p_norm_h = grids['p_norm_h'][0,0][0]
 p_norm_w = grids['p_norm_w'][0,0][0]
-
+"""
 #... OR SET UP MANUALLY
 # Momentum grids
-"""
-p_norm_w = np.linspace(0, 15, 10)
-anglegrid = np.linspace(-np.pi, 0, 20)
+
+p_norm_w = np.linspace(0, 15, 50)
+anglegrid = np.linspace(-np.pi, 0, 50)
 ksi0_w = np.cos(anglegrid)
 
 # Calculate the normalised momentum and pitch angle on the half grid
@@ -82,7 +82,7 @@ ksi0_h = 0.5 * (ksi0_w[1:] + ksi0_w[:-1])
 #Harmonics to take into account
 harmonics = np.array([2])
 
-plot_option = 0
+plot_option = 1
 
 # DKE calculations or not
 DKE_calc = 0
@@ -139,7 +139,7 @@ if rank == 0:
     Edens *= 4*np.pi /c * 1e6 
     # With this, Edens_N is k-space energy density in J/N^2
     #---Added factor for now to match C3PO output---#
-    Edens *= 1.5
+    Edens *= 2
 
     if plot_option:
         plt.figure()

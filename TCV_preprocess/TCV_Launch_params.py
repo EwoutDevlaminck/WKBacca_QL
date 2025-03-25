@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #---Load the data------------#
 #----------------------------#
 
-file_loc = '/home/devlamin/WKBacca_QL/TCV_preprocess/74302/For_WKBeam_with_scrapeoff/ECparams_74302_1.20s.mat'
+file_loc = '/home/devlamin/WKBacca_QL/TCV_preprocess/85352_0.9/ECparams_85352_0.90s.mat'
 
 data = loadmat(file_loc)['beams']
 

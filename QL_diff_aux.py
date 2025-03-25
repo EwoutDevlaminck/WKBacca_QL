@@ -547,12 +547,12 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                             D_rf_lj_wh[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
                                     Edens_lj_h[t, :,:], Te_ref, \
-                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                                        P[l, 0], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
                             
                             D_rf_lj_hh[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                                     Edens_lj_h[t, :,:], Te_ref, \
-                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                                        P[l, 0], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
                         else:
                             D_rf_lj_wh[t, :, n_idx] = np.zeros_like(p_norm_w)
                             D_rf_lj_hh[t, :, n_idx] = np.zeros_like(p_norm_h)
@@ -639,6 +639,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                 # Define the integrands for the different bounce integrals [t]
                 # See the notes for the derivation of these
                 DRF0_integrand = ksi0_over_ksi_j_h**2 * B_ratio_h
+                """
                 min_DRF0_integrand = np.amin(DRF0_integrand)
                 DRF0_integrand = np.where(DRF0_integrand > 10*min_DRF0_integrand, 10*min_DRF0_integrand, DRF0_integrand)
                 if DKE_calc:
@@ -648,7 +649,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                     DRF0F_integrand = (B_ratio_h -1) * ksi0_over_ksi_j_h**3
                     min_DRF0F_integrand = np.amin(DRF0F_integrand)
                     DRF0F_integrand = np.where(DRF0F_integrand > 10*min_DRF0F_integrand, 10*min_DRF0F_integrand, DRF0F_integrand)
-
+                """
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
                 D_rf_lj_wh = np.zeros((len(theta_grid_j_h), len(p_norm_w), len(n)))
@@ -667,12 +668,12 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                             D_rf_lj_wh[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_w, ksi_vals[t], npar, nperp, \
                                     Edens_interp_lj_h[t, :, :], Te_ref, \
-                                        P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                                        P[l, 0], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
 
                             D_rf_lj_hh[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                                     Edens_interp_lj_h[t, :, :], Te_ref, \
-                                        P[l, t], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
+                                        P[l, 0], X_h[0, t], R_h[0, t], L_h[0, t], S_h[0, t], harm, eps).T
                         else:
                             D_rf_lj_wh[t, :, n_idx] = np.zeros_like(p_norm_w)
                             D_rf_lj_hh[t, :, n_idx] = np.zeros_like(p_norm_h)
@@ -759,7 +760,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                             D_rf_lj_hw[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                                     Edens_lj_w[t,:,:], Te_ref, \
-                                        P[l, t], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
+                                        P[l, 0], X[l, t], R[l, t], L[l, t], S[l, t], harm, eps).T
                         else:
                             D_rf_lj_hw[t, :, n_idx] = np.zeros_like(p_norm_h)
 
@@ -838,6 +839,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                 # Define the integrands for the different bounce integrals [t]
                 # See the notes for the derivation of these
                 DRF0_integrand = ksi0_over_ksi_j_w**2 * B_ratio_w
+                """
                 min_DRF0_integrand = np.amin(DRF0_integrand)
                 DRF0_integrand = np.where(DRF0_integrand > 10*min_DRF0_integrand, 10*min_DRF0_integrand, DRF0_integrand)
                 if DKE_calc:
@@ -847,7 +849,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                     DRF0F_integrand = (B_ratio_w -1) * ksi0_over_ksi_j_w**3
                     min_DRF0F_integrand = np.amin(DRF0F_integrand)
                     DRF0F_integrand = np.where(DRF0F_integrand > 10*min_DRF0F_integrand, 10*min_DRF0F_integrand, DRF0F_integrand)
-
+                """
                 # All is set up now, we just need to perform the expensive D_RF_nobounce calculation
 
                 D_rf_lj_hw = np.zeros((len(theta_grid_j_w), len(p_norm_h), len(n)))
@@ -866,7 +868,7 @@ def D_RF(psi, theta_w, p_norm_w, p_norm_h, ksi0_w, ksi0_h, npar, nperp, Edens, E
                             D_rf_lj_hw[t, :, n_idx] = \
                                 D_RF_nobounce(p_norm_h, ksi_vals[t], npar, nperp, \
                                     Edens_interp_lj_w[t, :, :], Te_ref, \
-                                        P[l, t], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
+                                        P[l, 0], X_w[0, t], R_w[0, t], L_w[0, t], S_w[0, t], harm, eps).T
                         else:
                             D_rf_lj_hw[t, :, n_idx] = np.zeros_like(p_norm_h)
                         

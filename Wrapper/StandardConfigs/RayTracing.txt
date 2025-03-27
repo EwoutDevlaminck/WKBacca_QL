@@ -232,3 +232,5 @@ cuteldensAt = 812.
 twodim = False
 
 beamView = False
+
+vesselfile = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/input/85352_vessel.mat'

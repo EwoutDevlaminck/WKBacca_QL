@@ -52,13 +52,13 @@ tic = time.time()
 #outputname = 'QL_bounce_TCV74302_test.h5'
 
 #TCV72644 case
-filename_WKBeam     = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/L4_binned_QL_nonuni.hdf5'
-filename_Eq         = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/L4_raytracing.txt'
-filename_abs        = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/L4_abs_nonuni.txt'
-filename_abs_dat    = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/L4_binned_abs_nonuni.hdf5'
-outputname          = '/home/devlamin/WKBacca_LUKE_cases/TCV_85352_0.9/WKBeam_results/nofluct/QL_waves_TCV_85352_0.9_nofluct.h5'
+filename_WKBeam     = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/output/RhoThetaN_binned.hdf5'
+filename_Eq         = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/RayTracing.txt'
+filename_abs        = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/Absorption.txt'
+filename_abs_dat    = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/output/Absorption_binned.hdf5'
+outputname          = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/output/QL_waves_TCV_85352_0.9_fluct.h5'
 
-grid_file           = '/home/devlamin/WKBacca_QL/WKBacca_cases/TCV_85352_0.9/input/WKBacca_grids.mat'
+grid_file           = '/home/devlamin/WKbeam_simulations/TCV_85352_0.9_fluct/output/WKBacca_grids.mat'
 
 # IMPORT FROM LUKE
 

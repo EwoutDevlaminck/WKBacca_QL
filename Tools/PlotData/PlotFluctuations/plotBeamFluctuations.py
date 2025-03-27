@@ -21,6 +21,7 @@ from RayTracing.modules.atanrightbranch import atanRightBranch
 from RayTracing.modules.scattering.GaussianModel import GaussianModel_base
 from RayTracing.modules.scattering.ShaferModel import ShaferModel_base
 from Tools.PlotData.CommonPlotting import plotting_functions
+from Tools.PlotData.PlotVessel.plotVessel import plotVessel
 
 import CommonModules.physics_constants as PhysConst
 
@@ -322,6 +323,24 @@ def plot_beam_fluct(inputdata):
     # Plotting directives
     fig1 = plt.figure(1, figsize=figsize)
     ax1 = fig1.add_subplot(111, aspect='equal')
+
+    #Plot the vessel
+    try:
+        print('Plotting vessel')
+        Rv_in, Rv_out, Zv_in, Zv_out, Zt, Rt = plotVessel(idata)
+        print('Plotting vessel')
+        R_fill = np.concatenate([Rv_in, np.flipud(Rv_out)])
+        Z_fill = np.concatenate([Zv_in, np.flipud(Zv_out)])
+        Rt_fill = np.concatenate([Rt, Rv_in])
+        Zt_fill = np.concatenate([Zt, Zv_in])
+        ax1.fill(R_fill, Z_fill, color=[0.4, 0.4, 0.4], edgecolor='none', zorder=13)
+        ax1.fill(Rt_fill, Zt_fill, color=[0.5, 0.5, 0.5], edgecolor='none', zorder=13)
+        vessel_plotted = True
+    except:
+        print('No vessel data found')
+        vessel_plotted = False
+        pass
+
     # ... fluctuation envelope ...
     if not idata.scattering:
         reds_map = matplotlib.colormaps.get_cmap('Reds')
@@ -329,19 +348,48 @@ def plot_beam_fluct(inputdata):
     else:
         Ne = IntSample(R1d, Z1d, Eq.NeInt.eval)
         deltaNe = np.where(equilibrium<1.6, fluct.T*Ne, 0)
-        c1 = ax1.pcolormesh(R1d, Z1d, deltaNe, cmap='Reds', alpha=.9, zorder=0)
+        c1 = ax1.pcolormesh(R1d, Z1d, deltaNe, cmap='Reds', vmin=0., alpha=.9, zorder=0)
         colorbarFluct = plt.colorbar(c1, orientation='vertical', pad=.05, shrink=.7)
         #colorbarFluct.set_label(label=r'$\langle \delta n_e\rangle /n_e$', size=16)
         colorbarFluct.set_label(label=r'$RMS\ \delta n_e [1e19 m^{-3}]$', size=13)
     ### colorbarFluct.set_label(r'')
     # ... flux surfaces ...
-    lines = np.arange(0, np.amax(equilibrium), 0.2)
+    lines = np.arange(0, np.amax(equilibrium), 0.1)
     ax1.contour(R1d, Z1d, np.sqrt(equilibrium), lines, colors='grey', linestyles='dashed', linewidths=1, zorder=3)
     ax1.contour(R1d, Z1d, np.sqrt(equilibrium), [1.], colors='black', linestyles='solid', linewidths=1, zorder=6)
     ax1.set_xlabel('$R$ [cm]') 
     ax1.set_ylabel('$Z$ [cm]')
     ax1.set_title('Wave propagation \n through fluctuations', fontsize=20)
     
+    # If vessel is plotted, set everything that is outside the vessel to white
+    if vessel_plotted:
+
+        from matplotlib.path import Path
+        # Create a Path object from the contour
+        contour_path = Path(np.column_stack((Rt, Zt)))
+        RR = np.tile(R1d, (nptZ, 1))
+        ZZ = np.tile(Z1d, (nptR, 1)).T
+
+        # Flatten grid arrays and check which points are inside the contour
+        points = np.column_stack((RR.ravel(), ZZ.ravel()))
+        mask = ~contour_path.contains_points(points)  # Invert mask: True outside
+
+        # Reshape mask back to 2D
+        mask = mask.reshape(RR.shape)
+
+        # Plot a white rectangle over the points outside the contour
+        c_white_trans = clrs.colorConverter.to_rgba('white', alpha=0.)
+        c_white = clrs.colorConverter.to_rgba('white', alpha=1.)
+        transMap_help = clrs.LinearSegmentedColormap.from_list('transMap_help',  
+            [c_white_trans, c_white], 512)
+
+        ax1.pcolormesh(RR, ZZ, mask, cmap=transMap_help, zorder=8)
+        # And turn the axis borders transparent
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['bottom'].set_visible(False)
+        ax1.spines['left'].set_visible(False)
+
     #Then plot the propagation of the wave on top.
     
     
@@ -408,6 +456,7 @@ def plot_beam_fluct(inputdata):
     except AttributeError:
         beamView = False
 
+
     if uniform_bins:
         if beamView == True:
             ax1.set_xlim(Xmin_beam, Xmax_beam)
@@ -423,6 +472,9 @@ def plot_beam_fluct(inputdata):
             ax1.set_xlim(Rmin, Rmax)
             ax1.set_ylim(Zmin, Zmax)
 
+    if vessel_plotted:
+        ax1.set_xlim(np.amin(Rv_out), np.max([np.amax(Rv_out), np.amax(100*RR_beam)]))
+        ax1.set_ylim(np.amin(Zv_out), np.max([np.amax(Zv_out), np.amax(100*ZZ_beam)]))
     plt.show()
 
     # return

@@ -1,6 +1,6 @@
 #!/bin/bash
 command1=/home/devlamin/WKbeam_simulations/TCV_85352_1.3_nofluct/RayTracing.txt
-mpiexec -np 32 python3 WKBeam.py trace $command1
+mpiexec -np 24 python3 WKBeam.py trace $command1
 wait
 python3 WKBeam.py bin /home/devlamin/WKbeam_simulations/TCV_85352_1.3_nofluct/Angular.txt
 python3 WKBeam.py bin /home/devlamin/WKbeam_simulations/TCV_85352_1.3_nofluct/Absorption.txt

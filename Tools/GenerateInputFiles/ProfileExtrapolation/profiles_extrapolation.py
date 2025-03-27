@@ -57,7 +57,7 @@
 # <codecell>
 
 # Working directory (must contain the original data files)
-working_dir = '/home/devlamin/WKbeam_simulations/TCV_85352_1.3_nofluct/input/'
+working_dir = '/home/devlamin/matlab/WKBeam_input_prep/31541_0.50/'
 
 # <codecell>
 
@@ -146,15 +146,15 @@ plot(Te);
 # <codecell>
 
 # Parameters for the density profile
-IndexIstart = rho_ne.size - 6
+IndexIstart = rho_ne.size - 4
 IndexIstop = rho_ne.size
-fit_parameter_seed_ne = [1.2, 0.03, 0.2, 0.2]
+fit_parameter_seed_ne = [0.1, 0.03, 1, 0.2]
 # Parameters for the temperature profile
-IndexJstart = rho_Te.size - 6
+IndexJstart = rho_Te.size - 4
 IndexJstop = rho_Te.size
 fit_parameter_seed_Te = [2., 0.01, 1.2, 0.2]
 # Common parameters
-rho_max = 1.3
+rho_max = 1.2
 nmbrAdditionalPoints = 20
 
 # <markdowncell>

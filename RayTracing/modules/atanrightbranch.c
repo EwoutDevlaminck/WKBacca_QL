@@ -6,7 +6,7 @@
         "depends": [],
         "include_dirs": [
             ".",
-            "/home/devlamin/WKBacca_QL/venv/lib64/python3.10/site-packages/numpy/core/include"
+            "/opt/python-3.10-base-toolkit-gcc-11.2.1/lib/python3.10/site-packages/numpy/core/include"
         ],
         "name": "RayTracing.modules.atanrightbranch",
         "sources": [

@@ -2,6 +2,7 @@ equilibriumdirectory                = 'input/'
 inputdirectory                      = 'output/'
 inputfilename                       = ['Test']
 outputdirectory                     =  'output/'
+nmbrFiles                           = 'all'
 uniform_bins                        = True
 min                                 = [75., -75.]
 max                                 = [125., 75.]

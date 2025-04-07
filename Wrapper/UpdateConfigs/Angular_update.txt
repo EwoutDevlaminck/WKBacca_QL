@@ -1,6 +1,7 @@
 inputdirectory                  = 'output/'
 inputfilename                   = ['Test']
 outputdirectory                 =  'output/'
+nmbrFiles                       = 'all'
 min                             = [85., -2.]
 max                             = [120., -1.]
 nmbr                            = [100, 100]

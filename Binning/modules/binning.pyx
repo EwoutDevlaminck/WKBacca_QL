@@ -160,7 +160,7 @@ cpdef int binning(np.ndarray [double, ndim=3] data_sim,
    for i in range(0,nTraces):
 
       # sometimes print out some information.
-      if (i*100/(int(nTraces/20)*20)) % 10 == 0:
+      if i % 500 == 0:
          print('progress: binning ray %i / %i\n' %(i,nTraces))
          sys.stdout.flush()
 

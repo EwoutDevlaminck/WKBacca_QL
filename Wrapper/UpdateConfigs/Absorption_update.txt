@@ -2,6 +2,7 @@ inputdirectory                  = 'output/'
 equilibriumdirectory            = 'input/'
 inputfilename                   = ['Test']
 outputdirectory                 = 'output/'
+nmbrFiles                       = 'all'
 uniform_bins                    = True
 bins                            = [['WKBacca_grids.mat', 'rho_S']]
 min                             = [0.01]

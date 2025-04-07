@@ -5,6 +5,9 @@ AND TO THE FILES CHOSEN AMONG THE PARAMETERS.
 
 # Load standard modules 
 import sys
+import os
+import re 
+import glob
 import math
 import h5py
 import numpy as np
@@ -122,7 +125,27 @@ def binning_pyinterface(idata):
 
     # READ BEAM PARAMETERS FROM THE INPUT FILE
     ############################################################################
-    for i in range(0,idata.nmbrFiles):
+    if idata.nmbrFiles == 'all':
+            # Pattern: <output_dir>/<output_filename>_file#.hdf5
+        pattern = os.path.join(idata.inputdirectory, f"{idata.inputfilename}_file*.hdf5")
+
+        # Get list of matching files
+        existing_files = glob.glob(pattern)
+
+        # Extract numeric indices from filenames
+        indices = []
+        pattern_re = re.compile(f"{re.escape(idata.inputfilename)}_file(\\d+)\\.hdf5")
+        for file in existing_files:
+            match = pattern_re.search(os.path.basename(file))
+            if match:
+                indices.append(int(match.group(1)))
+        
+        nmbrFiles = len(indices)-1
+    else:
+        nmbrFiles = idata.nmbrFiles
+    print("NUMBER OF FILES TO BE PROCESSED: %i\n" %(nmbrFiles))
+
+    for i in range(0,nmbrFiles):
         # choose the right filename
         filename = idata.inputdirectory + idata.inputfilename + '_file%i.hdf5' %(i)
     

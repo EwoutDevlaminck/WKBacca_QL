@@ -8,6 +8,10 @@ Pass the MPI world and the input data to the routine.
 ############################################################################
 
 # Load standard modules
+import sys
+import os
+import re
+import glob
 from mpi4py import MPI
 # Load  local modules
 from CommonModules.input_data import InputData 
@@ -48,8 +52,29 @@ def call_ray_tracer(input_file):
 
     # Perform either organization task (for organization cores) or
     # the actual ray tracing for tracing cores
+
+    # Check first if there are already files in the output directory
+    # and if so, keep them and just add the new ones afterwards
+    # (this is done by adding the file index to the filename)
+
+    # Pattern: <output_dir>/<output_filename>_file#.hdf5
+    pattern = os.path.join(idata.output_dir, f"{idata.output_filename}_file*.hdf5")
+
+    # Get list of matching files
+    existing_files = glob.glob(pattern)
+
+    # Extract numeric indices from filenames
+    indices = []
+    pattern_re = re.compile(f"{re.escape(idata.output_filename)}_file(\\d+)\\.hdf5")
+    for file in existing_files:
+        match = pattern_re.search(os.path.basename(file))
+        if match:
+            indices.append(int(match.group(1)))
+ 
+    # Compute next available index
+    start_index = max(indices) + 1 if indices else 0
     if rank % nmbrCPUperGroup == 0:
-        mainOrg(input_file, idata, comm)
+        mainOrg(input_file, idata, comm, start_index)
     else:
         mainTrace(idata, comm)
 

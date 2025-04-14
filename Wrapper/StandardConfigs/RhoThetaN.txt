@@ -19,7 +19,7 @@ inputfilename                       = ['Test']
 
 # number of files, if more than one, not only the file that starts with
 # rank0... is used.
-nmbrFiles = 1
+nmbrFiles = 'all'
 
 # directory, where the binned results are written
 outputdirectory                     = 'output/'

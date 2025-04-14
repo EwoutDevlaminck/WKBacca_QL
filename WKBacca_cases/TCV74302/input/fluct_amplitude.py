@@ -41,8 +41,12 @@ if __name__ == "__main__":
     plt.colorbar()
     plt.show()
     """
-    Ne_file = np.loadtxt('WKBacca_cases/TCV72644/t_1.05/input/ne.dat', skiprows=1)
+    Ne_file = np.loadtxt('/home/devlamin/WKbeam_simulations/TCV_74302_1.2_nofluct/input/ne.dat', skiprows=1)
     rho, Ne = Ne_file[:, 0], Ne_file[:, 1]
+    ampl = ampl_rho(rho)
+    print(len(rho))
+    print(len(ampl))
+    np.savetxt('/home/devlamin/WKbeam_simulations/TCV_74302_1.2_nofluct/input/nefluct.dat', np.column_stack((rho, ampl)), header='rho, ampl', fmt='%.3f', delimiter=' ')
 
     theta = 0
     delt = scatteringDeltaneOverne(Ne, rho, theta)

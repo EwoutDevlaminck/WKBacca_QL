@@ -245,7 +245,7 @@ def D_RF_prefactor(p_norm, ksi0, Ne_ref, Te_ref, omega, eps):
     inv_kabsp = 1 /(abs(Ksi0)* P_norm + eps)
     omega_pe = disp.disParamomegaP(Ne_ref)
 
-    prefac =  4*np.pi**2 * Gamma * inv_kabsp / (m_e * omega_pe**2 * coulomb_log * Gamma_Te**3)  * (c/omega)
+    prefac =  8*np.pi**2 * Gamma * inv_kabsp / (m_e * omega_pe**2 * coulomb_log * Gamma_Te**3)  * (c/omega)
 
     return prefac.T
 

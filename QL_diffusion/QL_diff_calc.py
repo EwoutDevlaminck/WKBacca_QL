@@ -135,8 +135,8 @@ def call_QLdiff(input_file):
         Edens /= dV_N[None, None, None, :] # Energy density in k-space
         Edens *= 4*np.pi /c * 1e6 
         # With this, Edens_N is k-space energy density in J/N^2
-        #---Added factor for now to match C3PO output---#
-        Edens *= 2
+        # No factor 2 comes in anywhere anymore. The energy density is derived from the full complex electric field so in fact
+        # The normalisation receives a factor 2 already.
 
             
         # Calculate the reference quantities needed for the normalisation

@@ -67,6 +67,10 @@ WKBeam_modes = {
     	'procedure': 'plot_beam_fluct',
     	'module': 'Tools.PlotData.PlotFluctuations.plotBeamFluctuations',
     },
+    'QLdiff': {
+    	'procedure': 'call_QLdiff',
+    	'module': 'QL_diffusion.QL_diff_calc',
+    },
 }
 
 # Help messange (list operation modes, etc...)
@@ -92,6 +96,7 @@ msg = """
   8. flux      - requires <binning_configuration_file>
   9. beam3d    - requires <binning_configuration_file>
   10.beamFluct - requires <binned_hdf5_file> and <ray_tracing_configuration_file>
+  11.QLdiff    - requires <QL_diffusion_configuration_file>
 """
 
 # Check the console input

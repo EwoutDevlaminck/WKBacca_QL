@@ -1,0 +1,37 @@
+# Standard configuration file for the quasilinear diffusion tensor calculation
+# As needed in the LUKE code suite.
+
+# INPUT AND OUTPUT
+##########################################################################
+# the ray trace file that is used to set up the WKbeam WKbeam_simulation
+
+configfile              = 'RayTracing.txt'
+
+#If true, provide pmin, max, np and n_ksi yourself
+manual_grids            = False
+pmin                    = 0
+pmax                    = 15
+np                      = 50
+nksi                    = 100
+
+# Otherwise, we use the file with the grids used in LUKE
+gridfile                = 'WKBacca_grids.mat'
+
+
+# directory, where the results are written
+outputdirectory         = 'output/'
+
+# output filename. If not defined, inputfilename is used and _binned attached 
+outputfilename          = 'QLdiff_binned'
+
+absorption_file         = 'Absorption.txt'
+absorption_data_file    = 'Absorption_binned.hdf5'
+##########################################################################
+
+# CALCULATION SPECIFICS
+##########################################################################
+
+# What harmonics of the wave to take into account
+harmonics               = [2]
+# Wether the first oder components of the QL diffusion tensor should also be calculated
+DKE_calc                = 0

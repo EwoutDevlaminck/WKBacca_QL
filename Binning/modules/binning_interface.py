@@ -139,13 +139,13 @@ def binning_pyinterface(idata):
             match = pattern_re.search(os.path.basename(file))
             if match:
                 indices.append(int(match.group(1)))
-        
-        nmbrFiles = len(indices)-1
+        indices.sort()
+        nmbrFiles = len(indices)
     else:
         nmbrFiles = idata.nmbrFiles
     print("NUMBER OF FILES TO BE PROCESSED: %i\n" %(nmbrFiles))
 
-    for i in range(0,nmbrFiles):
+    for i in indices:
         # choose the right filename
         filename = idata.inputdirectory + idata.inputfilename + '_file%i.hdf5' %(i)
     

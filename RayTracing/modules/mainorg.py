@@ -32,7 +32,7 @@ from RayTracing.modules.dispersion_matrix_cfunctions import *
 ###########################################################################
 # MAIN ROUTINE FOR ORGANISATION CORES
 ###########################################################################
-def mainOrg(inputfilename, idata, comm, start_index):
+def mainOrg(inputfilename, idata, comm):
 
     #######################################################################
     # ORGANISE MPI WORLD
@@ -230,7 +230,7 @@ def mainOrg(inputfilename, idata, comm, start_index):
     ############################################################################
 
     # open hdf5 file for this rank
-    filename = "_file%i.hdf5" %(int(rank/nmbrCPUperGroup) + start_index) 
+    filename = "_file_temp_%i.hdf5" %(int(rank/nmbrCPUperGroup)) 
     filename = idata.output_filename + filename 
     fid = h5py.File(idata.output_dir+filename,'w') 
 

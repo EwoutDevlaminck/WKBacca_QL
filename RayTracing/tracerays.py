@@ -53,30 +53,64 @@ def call_ray_tracer(input_file):
     # Perform either organization task (for organization cores) or
     # the actual ray tracing for tracing cores
 
-    # Check first if there are already files in the output directory
-    # and if so, keep them and just add the new ones afterwards
-    # (this is done by adding the file index to the filename)
-
-    # Pattern: <output_dir>/<output_filename>_file#.hdf5
-    pattern = os.path.join(idata.output_dir, f"{idata.output_filename}_file*.hdf5")
-
-    # Get list of matching files
-    existing_files = glob.glob(pattern)
-
-    # Extract numeric indices from filenames
-    indices = []
-    pattern_re = re.compile(f"{re.escape(idata.output_filename)}_file(\\d+)\\.hdf5")
-    for file in existing_files:
-        match = pattern_re.search(os.path.basename(file))
-        if match:
-            indices.append(int(match.group(1)))
- 
-    # Compute next available index
-    start_index = max(indices) + 1 if indices else 0
     if rank % nmbrCPUperGroup == 0:
-        mainOrg(input_file, idata, comm, start_index)
+        mainOrg(input_file, idata, comm)
     else:
         mainTrace(idata, comm)
+
+    # At the end, have one core checking the results and properly naming the files
+
+
+    # All ranks wait for others to finish writing
+    comm.Barrier()
+
+    # Only one rank checks which indices are taken
+    existing_indices = None
+    if rank == 0:
+        # Check first if there are already files in the output directory
+        # and if so, keep them and just add the new ones afterwards
+        # (this is done by adding the file index to the filename)
+
+        # Pattern: <output_dir>/<output_filename>_file#.hdf5
+        pattern = os.path.join(idata.output_dir, f"{idata.output_filename}_file*.hdf5")
+        # Get list of matching files
+        existing_files = glob.glob(pattern)
+
+        # Extract numeric indices from filenames
+        indices = []
+        pattern_re = re.compile(f"{re.escape(idata.output_filename)}_file(\\d+)\\.hdf5")
+        for file in existing_files:
+            match = pattern_re.search(os.path.basename(file))
+            if match:
+                indices.append(int(match.group(1)))
+        print(f"Existing indices: {indices}")
+
+        # Find all the temp files created by the cores
+        # and assign them an index
+
+        pattern_temp = os.path.join(idata.output_dir, f"{idata.output_filename}_file_temp_*.hdf5")
+        # Get list of matching files
+        existing_temp_files = glob.glob(pattern_temp)
+        
+        # Give each temp file a unique index
+        assigned_indices = []
+        for file in existing_temp_files:
+            # Find the first available index
+            assigned_index = 0
+            while assigned_index in indices or assigned_index in assigned_indices:
+                assigned_index += 1
+            assigned_indices.append(assigned_index)
+            # Rename the temp file to the new index
+            new_filename = os.path.join(idata.output_dir, f"{idata.output_filename}_file{assigned_index}.hdf5")
+            os.rename(file, new_filename)
+            print(f"Renamed {file} to {new_filename}")
+
+        
+        # Print what files exist now
+        print(f"Final indices: {indices + assigned_indices}")
+        
+
+
 
     # return fro the procedure
     pass

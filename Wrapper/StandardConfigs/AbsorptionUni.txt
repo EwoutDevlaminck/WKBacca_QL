@@ -26,7 +26,7 @@ nmbrFiles = 'all'
 outputdirectory                 = 'output/'
 
 # output filename. If not defined, inputfilename is used and _binned attached 
-outputfilename = ['Absorption_binned']
+outputfilename = ['AbsorptionUni_binned']
 ##########################################################################
 
 

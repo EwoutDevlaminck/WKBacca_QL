@@ -7,4 +7,4 @@
 PYINT = python3
 
 # corresponding f2py
-FTOPY = f2py3
+FTOPY = f2py

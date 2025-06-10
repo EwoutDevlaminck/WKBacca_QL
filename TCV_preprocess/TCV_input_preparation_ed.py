@@ -27,10 +27,10 @@ import matplotlib.pyplot as plt
 import os
 import scipy.signal as signal
 import scipy.interpolate as spl
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import tkinter as tk
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+#from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# Disabled for now, spcsrv26 doesn't allow this.
 
 from BiSplineDer import BiSpline, UniBiSpline
 # This is needed for the extrapolation to a 2D grid of these profiles.
@@ -247,7 +247,7 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 
     rz_B_R_coarse = np.array(data['Bx'])
     rz_B_Z_coarse = np.array(data['By'])
-    rz_B_phi_coarse = np.array(data['BPHI'])
+    rz_B_phi_coarse = -np.array(data['BPHI']) # Negative sign added here for the proper convention! What was stored in LUKE uses the opposite sign
 
 
     # We replace NaN values with the average of the adjacent non-NaN values
@@ -272,6 +272,8 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
     rz_B_R = IntSample(R, Z, rz_B_R_spline.eval).T
     rz_B_Z = IntSample(R, Z, rz_B_Z_spline.eval).T
     rz_B_phi = IntSample(R, Z, rz_B_phi_spline.eval).T
+    rz_B_p = np.sqrt(rz_B_R**2 + rz_B_Z**2)
+    rz_q = np.sqrt((rz_R - Rp)**2 + (rz_Z - Zp)**2)*rz_B_phi / (rz_R*rz_B_p)
 
     psi_antenna = rz_psi_spline.eval(antenna_loc[0], antenna_loc[1]) #psi value at antenna location. We need this to know where ne has to be zero for sure
 
@@ -280,7 +282,10 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 
         # Check iteratively where a good boundary for the plasma is, i.e. where we have not yet encountered an x point
         # Otherwise we could have articafs of density outside the plasma
-        psi_forced_edge = interactive_boundary_setting(rz_R, rz_Z, rz_psi, psi_antenna)
+        #psi_forced_edge = interactive_boundary_setting(rz_R, rz_Z, rz_psi, psi_antenna)
+
+        # Bypass for spcsrv26, where the interactive plotting is not working at the moment
+        psi_forced_edge = 1.1
         print(f'Forced edge value set to {psi_forced_edge:.2f}')
 
         # Now force the psi field to a constant value outside this edge, as then we can be sure the density is zero there
@@ -577,26 +582,26 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
         plot_Bt.set_xlabel('R [m]')
         plot_Bt.set_ylabel('Z [m]')
         plot_Bt.set_title(r'$B_t\ [T]$')
-
+        
         plot_BR = plt.subplot(2,3,3)
         plot_BR.set_aspect('equal')
-        Br_grid = plot_BR.contourf(rz_R, rz_Z, rz_B_R, levels=100, cmap='OrRd')
+        Br_grid = plot_BR.contourf(rz_R, rz_Z, np.log(abs(rz_q)), levels=np.linspace(0, 4., 100), cmap='OrRd')
         plot_BR.contour(rz_R, rz_Z, rz_psi, [1], colors='black')
         plot_BR.contour(rz_R, rz_Z, rz_psi, np.linspace(0, rz_rho_max**2, 20), colors='grey', linestyles='dashed', linewidths=1)
         plt.colorbar(Br_grid)
         plot_BR.set_xlabel('R [m]')
         plot_BR.set_ylabel('Z [m]')
-        plot_BR.set_title(r'$B_R\ [T]$')
-
+        plot_BR.set_title(r'$log(q_{local})$')
+        
         plot_BZ = plt.subplot(2,3,4)
         plot_BZ.set_aspect('equal')
-        Bz_grid = plot_BZ.contourf(rz_R, rz_Z, rz_B_Z, levels=100, cmap='OrRd')
+        Bz_grid = plot_BZ.contourf(rz_R, rz_Z, rz_B_p, levels=100, cmap='OrRd')
         plot_BZ.contour(rz_R, rz_Z, rz_psi, [1], colors='black')
         plot_BZ.contour(rz_R, rz_Z, rz_psi, np.linspace(0, rz_rho_max**2, 20), colors='grey', linestyles='dashed', linewidths=1)
         plt.colorbar(Bz_grid)
         plot_BZ.set_xlabel('R [m]')
         plot_BZ.set_ylabel('Z [m]')
-        plot_BZ.set_title(r'$B_Z\ [T]$')
+        plot_BZ.set_title(r'$B_p\ [T]$')
 
         plot_ne = plt.subplot(2,3,5)
         plot_ne.set_aspect('equal')
@@ -629,8 +634,8 @@ def TCV_input_prep_ed(filename, output_names= ['ne.dat', 'Te.dat', 'topfile'], p
 """----------------------------------"""
 
 if __name__ == '__main__':
-    filename = r"/home/devlamin/Documents/WKBeam_related/WKBacca_dev_v1/TCV_preprocess/EQUIL_TCV_72644_1.05s.mat"
-    antenna_location = [122.99, -0.29] #In cm, position of the antenna in R, Z
+    filename = r"/home/devlamin/WKBacca_QL/TCV_preprocess/77330/EQUIL_TCV_77330_1.3000.mat"
+    antenna_location = [122.90, -0.3] #In cm, position of the antenna in R, Z
     # For L1/L4 usually around 122, 0. For L2/L5 around 122, 50.5.
     # This is basically to check if the density goes to zero at the antenna location
     TCV_input_prep_ed(filename, plot_option=1, correct_psi_option=1, antenna_loc=antenna_location)

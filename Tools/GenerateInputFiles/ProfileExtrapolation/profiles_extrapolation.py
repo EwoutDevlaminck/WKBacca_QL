@@ -57,7 +57,7 @@
 # <codecell>
 
 # Working directory (must contain the original data files)
-working_dir = '/home/omaj/Codes/WKBeam/WKBEAM/StandardCases/AUG30907_0_72/input/originals/'
+working_dir = '/home/devlamin/matlab/WKBeam_input_prep/31541_0.50/'
 
 # <codecell>
 
@@ -142,19 +142,20 @@ figure(0)
 plot(Ne);
 plot(Te);
 
+
 # <codecell>
 
 # Parameters for the density profile
-IndexIstart = 135
+IndexIstart = rho_ne.size - 4
 IndexIstop = rho_ne.size
-fit_parameter_seed_ne = [1., 0.03, 1.2, 0.2]
+fit_parameter_seed_ne = [0.1, 0.03, 1, 0.2]
 # Parameters for the temperature profile
-IndexJstart = 118
+IndexJstart = rho_Te.size - 4
 IndexJstop = rho_Te.size
 fit_parameter_seed_Te = [2., 0.01, 1.2, 0.2]
 # Common parameters
-rho_max = 1.9
-nmbrAdditionalPoints = 200
+rho_max = 1.2
+nmbrAdditionalPoints = 20
 
 # <markdowncell>
 
@@ -225,6 +226,7 @@ plot(rho_Te_extended, Te_extended);
 xlabel(r'$\rho$')
 ylabel(r'$T_e$')
 legend(('original data', 'extended data'));
+show()
 
 # <markdowncell>
 

@@ -230,7 +230,7 @@ def mainOrg(inputfilename, idata, comm):
     ############################################################################
 
     # open hdf5 file for this rank
-    filename = "_file%i.hdf5" %(int(rank/nmbrCPUperGroup)) 
+    filename = "_file_temp_%i.hdf5" %(int(rank/nmbrCPUperGroup)) 
     filename = idata.output_filename + filename 
     fid = h5py.File(idata.output_dir+filename,'w') 
 

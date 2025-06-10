@@ -51,11 +51,19 @@ def plot_binned(inputdata):
 
         try:
             resolveY = True
-            Ymin = fid.get('Ymin')[()]
-            Ymax = fid.get('Ymax')[()]
-            nmbrY = fid.get('nmbrY')[()]
+            Zmin = fid.get('Ymin')[()]
+            Zmax = fid.get('Ymax')[()]
+            nmbrZ = fid.get('nmbrY')[()]
         except:
             resolveY = False
+
+        try:
+            resolveZ = True
+            Zmin = fid.get('Zmin')[()]
+            Zmax = fid.get('Zmax')[()]
+            nmbrZ = fid.get('nmbrZ')[()]
+        except:
+            resolveZ = False
 
 
         try:
@@ -67,9 +75,7 @@ def plot_binned(inputdata):
             resolveNpar = False
 
 
-        Zmin = fid.get('Zmin')[()]
-        Zmax = fid.get('Zmax')[()]
-        nmbrZ = fid.get('nmbrZ')[()]
+
         fid.close()
 
 	
@@ -78,8 +84,8 @@ def plot_binned(inputdata):
         DeltaX = (Xmax-Xmin)/nmbrX
         DeltaZ = (Zmax-Zmin)/nmbrZ
 
-        if resolveY == True:
-            Wfct[i] = np.sum(Wfct[i],axis=1)
+        #if resolveY == True:
+        #    Wfct[i] = np.sum(Wfct[i],axis=1)
         if resolveNpar == True:
             Wfct[i] = np.sum(Wfct[i],axis=2)
 
@@ -99,7 +105,7 @@ def plot_binned(inputdata):
     # and extract the appropriate function to visualize the equilibrium:
     # either the psi coordinate for tokamaks or the density
     # for generic axisymmetric devices (TORPEX).
-    if idata.equilibrium == 'Tokamak':
+    if idata.equilibrium == 'Tokamak' and resolveZ:
 
         Eq = TokamakEquilibrium(idata)
 
@@ -148,7 +154,7 @@ def plot_binned(inputdata):
     plt.rc('ytick', labelsize=16) 
 	
     ax = plt.subplot(121, aspect='equal')
-    if idata.equilibrium == 'Tokamak':
+    if idata.equilibrium == 'Tokamak' and resolveZ:
         plt.contour(R1d, Z1d, equilibrium, np.linspace(0, 2, 19), colors='grey', linestyles='dashed', linewidths=1)
         plt.contour(R1d, Z1d, equilibrium, [1.], colors='r', linewidths=1)
     Wfct = np.sum(Wfct, axis=0)
@@ -171,7 +177,8 @@ def plot_binned(inputdata):
         abs_coeff = np.where(Wfct[:, :, 0]>0., Absorption[:, :, 0] / Wfct[:, :, 0], 0.)
         plt.contour(Xgrid,Zgrid,Absorption[:,:0],levels=100, cmap='afmhot')
         plt.colorbar(E_density, shrink=0.6)
-    h1, h2, h3 = plotting_functions.add_cyclotron_resonances(R1d, Z1d, StixY, ax)
+    if resolveZ:
+        h1, h2, h3 = plotting_functions.add_cyclotron_resonances(R1d, Z1d, StixY, ax)
     #plot the flux surfaces to see where the plasma is situated  
 
 
@@ -181,14 +188,17 @@ def plot_binned(inputdata):
         plt.xlabel('X (cm)')
     else:
         plt.xlabel('R (cm)')
-    plt.ylabel('Z (cm)')
+    if resolveZ:
+        plt.ylabel('Z (cm)')
+    else:
+        plt.ylabel('Y (cm)')
 
 
 
     plt.subplot(122, aspect='equal')
     plt.contourf(Xgrid,Zgrid,Wfct[:,:,1],100, cmap='cividis')
     plt.colorbar(shrink=0.6)
-    if idata.equilibrium == 'Tokamak':    
+    if idata.equilibrium == 'Tokamak' and resolveZ:    
         #plot the flux surfaces to see where the plasma is situated
         plt.contour(R1d, Z1d, equilibrium, np.linspace(0, 2, 19), colors='grey', linestyles='dashed', linewidths=1)
         #LCFS

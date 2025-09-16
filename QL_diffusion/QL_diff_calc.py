@@ -94,7 +94,8 @@ def call_QLdiff(input_file):
                 sys.exit(1)
 
         try:
-            filename_RhoThetaN = idata.outputdirectory+'RhoThetaN_binned.hdf5'
+            filename_RhoThetaN = idata.outputdirectory + idata.binned_data_filename
+            # Load the binned data from the raytracing
             
             WhatToResolve, FreqGHz, mode, Wfct, Absorption, EnergyFlux, rhobins, thetabins, Nparallelbins, Nperpbins = read_h5file(filename_RhoThetaN)
 

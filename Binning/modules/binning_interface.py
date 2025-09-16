@@ -142,7 +142,8 @@ def binning_pyinterface(idata):
         indices.sort()
         nmbrFiles = len(indices)
     else:
-        nmbrFiles = idata.nmbrFiles
+        indices = idata.nmbrFiles
+        nmbrFiles = len(indices)
     print("NUMBER OF FILES TO BE PROCESSED: %i\n" %(nmbrFiles))
 
     for i in indices:

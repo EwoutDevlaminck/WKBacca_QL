@@ -31,7 +31,6 @@ This script contains the following functions:
 
 import h5py
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy.optimize import curve_fit
@@ -39,11 +38,13 @@ import scipy.signal as signal
 from scipy.interpolate import UnivariateSpline
 from CommonModules.BiSplineDer import BiSpline
 import random
+from itertools import cycle
 
 """-------------------------------------------------------------------------"""
 """ Functions for the beam profile analysis, auxiliary functions"""
 """-------------------------------------------------------------------------"""
-
+# Get the default color cycle
+color_cycle = cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
 
 def gaussian(x, ampl, mean, stdev):
     return ampl * np.exp(-((x-mean) /stdev)**2 / 2)
@@ -266,7 +267,7 @@ def profile_along_beam(dataFile, angleFile, profilewidth=10, checks=False, conve
 
     ## Find the R value after wich the beam is negligible due to absorption
 
-    beamIsPresent = find_R_absorb(Rphi, angleGrid, threshold=5e-3)
+    beamIsPresent = find_R_absorb(Rphi, angleGrid, threshold=1e-4)
 
     if checks:
         # Check first that the butterworth filter is not too aggressive
@@ -521,7 +522,7 @@ def plot_perp_profiles(datfile, index=20):
         FWHM_angle_gauss = datfile[filename]['FWHM_angle_gauss']
 
     
-        color = next(ax._get_lines.prop_cycler)['color']
+        color = next(color_cycle)
         ax.plot(perp_dimension, perp_profiles[index], label=filename, color=color)
         ax.plot(perp_dimension, gaussian(perp_dimension, perp_profiles[index].max(), 0, FWHM_gauss[index]/2.355), linestyle='dashed', color=color, alpha=.5)
         
@@ -565,11 +566,11 @@ def check_fits(datfile, location_index=1, distance_index=20, fit_range=1):
     ax.vlines([Per[fit_range], Per[-fit_range]], 0, profile.max(), linestyles='dashed', color='grey')
     plt.plot(Per, profile, label=f'Raw data, FWHM = {FullWidthHalfMax(Per, profile):.2f}', color='grey')
 
-    color = next(ax._get_lines.prop_cycler)['color']
+    color = next(color_cycle)
 
     ax.plot(Per, Cauchy(Per, *popt), label='Cauchy fit R²={:.4f}, FWHM = {:.2f}'.format(Rsq_cauch,  2*popt[2]), color=color)
     ax.hlines(Cauchy(Per, *popt).max()/2, Per[0], Per[-1], linestyles='dashed', color=color, alpha=.5)
-    color = next(ax._get_lines.prop_cycler)['color']
+    color = next(color_cycle)
     ax.plot(Per, gaussian(Per, *popt2), label='Gaussian fit R²={:.4f}, FWHM = {:.2f}'.format(Rsq_gauss,  2.355*popt2[2]), color=color)
     ax.hlines(gaussian(Per, *popt2).max()/2, Per[0], Per[-1], linestyles='dashed', color=color, alpha=.5)
     ax.legend(loc='upper right')
@@ -640,7 +641,7 @@ def broadening_over_distance(datfile, plotindex=1, relative=False, absorption_po
                 FWHM_angle_gauss_nofluct = FWHM_angle_gauss
                 stdev_moments_nofluct = stdev_moments
 
-                ylimits = [2, 2]
+                ylimits = [3, 3]
         
             else:
                 FWHM_angle_nofluct = 1
@@ -652,11 +653,11 @@ def broadening_over_distance(datfile, plotindex=1, relative=False, absorption_po
 
         if plotindex != 0:
             
-            color = next(ax._get_lines.prop_cycler)['color']
+            color = next(color_cycle)
 
             ax.set_xlabel('Distance [cm]')
             ax.set_xlim(0, distance[0])
-            ax.set_ylim(0, 5)
+            ax.set_ylim(0, 7)
             ax.scatter(distance, FWHM_exp , color=color, s=5, marker='x')
             ax.plot(distance, FWHM_gauss, label=key, color=color)
             ax.set_ylabel('FWHM [cm]')
@@ -695,12 +696,12 @@ def broadening_over_distance(datfile, plotindex=1, relative=False, absorption_po
                 label = rf'$b_{{{experi}}}$ {FWHM_exp_rel[index_absoprtion]:.2f}, $b_{{{gaussi}}}$ {FWHM_gauss_rel[index_absoprtion]:.2f}'
             else:
                 label = key
-
+            print(len(distance), len(FWHM_exp), len(FWHM_exp_nofluct))
             ax2.scatter(distance, FWHM_exp/FWHM_exp_nofluct , color=color,  s=5, marker='x')
             ax2.plot(distance, FWHM_gauss/FWHM_gauss_nofluct, label=label, color=color)
             ax2.set_title('Empirical and Gaussian FWHM (spatial)')
             ax2.set_xlim(0, distance[0])
-            ax2.set_ylim(0, 2)
+            ax2.set_ylim(0, 4)
             ax2.set_ylabel('Relative broadening')
             ax2.set_xlabel('Distance [cm]')
 
@@ -814,7 +815,7 @@ def compare_gaussian_beams(datfile, x_startfluct, x_endfluct, buffer=10, equalas
             ax.vlines(z0_before, -w0_before, w0_before, linestyles='dashed', colors='gray')
             ax.scatter(dist[startfluct:], width_along_beam[startfluct:], s=20, marker='x', alpha=0.5, c='gray')
 
-        color = next(ax._get_lines.prop_cycler)['color']
+        color = next(color_cycle)
         ax.plot(z, w_after, label=f'w0={w0_after:.2f}, z0={z0_after:.2f}', color=color)
         ax.plot(z, -w_after, color=color)
         ax.vlines(z0_after, -w0_after, w0_after, linestyles='dashed', colors=color)

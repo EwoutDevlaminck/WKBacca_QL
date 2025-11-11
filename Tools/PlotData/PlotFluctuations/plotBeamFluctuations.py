@@ -344,7 +344,11 @@ def plot_beam_fluct(inputdata):
     # ... fluctuation envelope ...
     if not idata.scattering:
         reds_map = matplotlib.colormaps.get_cmap('Reds')
-        ax1.set_facecolor(reds_map(0.))
+        #ax1.set_facecolor(reds_map(0.))
+        Ne = IntSample(R1d, Z1d, Eq.NeInt.eval)
+        c1 = ax1.pcolormesh(R1d, Z1d, Ne, cmap='Reds', vmin=0., alpha=.9, zorder=0)
+        colorbarNe = plt.colorbar(c1, orientation='vertical', pad=.05, shrink=.7)
+        colorbarNe.set_label(label=r'$n_e [1e19 m^{-3}]$', size=13)
     else:
         Ne = IntSample(R1d, Z1d, Eq.NeInt.eval)
         deltaNe = np.where(equilibrium<1.6, fluct.T*Ne, 0)

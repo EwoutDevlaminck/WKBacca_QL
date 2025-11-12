@@ -403,7 +403,7 @@ def plot_beam_fluct(inputdata):
     
     #This color matches my slides, cheers ED
     clrs_Ewout = ['#007480', '#413C3A', '#00A79F']
-    c_white_trans = clrs.colorConverter.to_rgba('white', alpha=0.5)
+    c_white_trans = clrs.colorConverter.to_rgba('white', alpha=0.8)
     Vel_recorded = False
     for beam in range(len(Wfct)):
         if Vel_recorded:
@@ -427,11 +427,11 @@ def plot_beam_fluct(inputdata):
     
         #Set the lower bound to be transparent, so we see the background contourf
         transMap.set_under(color='b', alpha=0.)
-        upperBound = np.amax(Q)
+        upperBound = np.amax(Q)/5
         lowerBound = upperBound*1e-2 #What's the lowest value we still display?
 
         #beamfig = ax1.contourf(100*RR_beam, 100*ZZ_beam, Q ,100, vmin=lowerBound, cmap=transMap, zorder=9) 
-        beamfig = ax1.pcolormesh(100*RR_beam, 100*ZZ_beam, Q, vmin=lowerBound, cmap=transMap, zorder=9)
+        beamfig = ax1.pcolormesh(100*RR_beam, 100*ZZ_beam, Q, vmin=lowerBound, vmax=upperBound, cmap=transMap, zorder=9)
     
         #Make it so that the colourmap only starts at lowerBound
         displayedMap = plt.cm.ScalarMappable(norm=clrs.Normalize(lowerBound, upperBound), cmap=transMap)  
